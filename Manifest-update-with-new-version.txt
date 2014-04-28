@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Ant-Version: Apache Ant 1.6.5
+Created-By: 1.6.0_31 (Sun Microsystems Inc.)
+
+Name: rules-constants.jar
+Implementation-Vendor: Avaya
+Implementation-Version: $Id: Manifest-update-with-new-version.txt 130 2013-10-15 09:52:44Z tolvoph1 $
+Implementation-Title: rules-constants.jar
+Specification-Version: November Release 2013 - Konstanten für Vectoring aus R5RulesBean entfernt

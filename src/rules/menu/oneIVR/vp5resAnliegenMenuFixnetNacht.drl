@@ -1,0 +1,41 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuFixnetNacht.drl 118 2013-09-26 13:45:02Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-26 15:45:02 +0200 (Thu, 26 Sep 2013) $
+ * $Revision: 118 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption stoerungMenu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-stoerung");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+ 
+/*
+   Static menu 1st level to force selection of STOERUNG
+*/
+rule "RES_FixnetNacht"
+	no-loop
+    activation-group "AnliegenMenu"
+	when
+	then
+      menuOptions.add(stoerungMenu());
+end
+ 

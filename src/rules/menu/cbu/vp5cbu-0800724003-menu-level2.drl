@@ -1,0 +1,126 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0800724003-menu-level2.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.MenuSelectionBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption fixnetSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("FX");
+  	  option.setPrompt("pm-voice-nv-pw");
+  	  option.setSkill("FX");
+  	  option.setEmergencyText("SA-FIXNET"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mobileSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("pm-mobile");
+  	  option.setSkill("MO");
+  	  option.setEmergencyText("SA-MOBILE"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption pagingSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PAGING");
+  	  option.setPrompt("pm-paging-nv");
+  	  option.setSkill("PAGING");
+  	  option.setEmergencyText("PAGING"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption fixnetOrder() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("FX");
+  	  option.setPrompt("pm-voice-nv");
+  	  option.setSkill("FX");
+  	  option.setEmergencyText("ORDER-FIXNET"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mobileOrder() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("pm-mobile");
+  	  option.setSkill("MO");
+  	  option.setEmergencyText("ORDER-MOBILE"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+   2nd level menu depends on selection on level 1
+      
+   Mapping numeric menu options to actual options:
+   Novartis 1st level menu
+	public static final Long MENU_SA_OUS_NV = new Long(4130);
+	public static final Long MENU_ORDER_NV = new Long(4140);
+	public static final Long MENU_OTHER_NV = new Long(4150);
+   Novartis 2nd menu level and VIP menu
+	public static final Long MENU_ORDER_FX_NV = new Long(4540);
+	public static final Long MENU_VIP_FX_NV = new Long(4541);
+	public static final Long MENU_SA_FX_PW_NV = new Long(4545);
+	public static final Long MENU_SA_MO_NV = new Long(4550);
+	public static final Long MENU_ORDER_MO_NV = new Long(4551);
+	public static final Long MENU_VIP_MO_NV = new Long(4552);
+	public static final Long MENU_PAGING_NV = new Long(4560);
+
+*/
+rule "01_Init_MenuSelectionBean"
+	no-loop
+	salience 20000
+	when
+		not (MenuSelectionBean())
+	then
+		assert ( new MenuSelectionBean(), true );
+end
+rule "02_MenuSelection_menuA_cbu/vp5cbu-0800724003-menu-level1"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("cbu/vp5cbu-0800724003-menu-level1") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("cbu/vp5cbu-0800724003-menu-level1"));
+end
+
+rule "0800724003_Level2_SA_OUS_Level1"
+	no-loop
+	when
+		MenuSelectionBean (menuA == "SA_OUS")
+	then
+		menuOptions.add(fixnetSA()); //4545
+		menuOptions.add(mobileSA()); //4550
+		menuOptions.add(pagingSA()); //4560
+end
+
+rule "0800724003_Level2_ORDER_Level1"
+	no-loop
+	when
+		MenuSelectionBean (menuA == "ORDER")
+	then
+		menuOptions.add(fixnetOrder()); //4540
+		menuOptions.add(mobileOrder()); //4551
+end

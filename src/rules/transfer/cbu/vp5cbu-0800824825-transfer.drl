@@ -1,0 +1,111 @@
+package com.nortel.ema.swisscom.bal.rules.cbu
+
+/*
+	@(#) $Id: vp5cbu-0800824825-transfer.drl 131 2013-10-18 05:47:56Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProductClusters;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "000_Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "001_CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+
+rule "002_MenuLevel1Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel1Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel1Selected((String)callprofile.get("cbu/vp5cbu-0800824825-menu-level1"));
+end
+
+rule "ID1040"
+	no-loop
+	salience 5
+	when
+		R5RulesBean ( menuLevel1Selected == "TRANSFERALM" )
+	  	transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41040");
+		transferRulesState.setQualificationResult("7530");
+end
+
+rule "ID1041"
+	no-loop
+	when
+		R5RulesBean( menuLevel1Selected == "SF" )
+	  	transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41041");
+		transferRulesState.setQualificationResult("7558");
+end
+
+rule "ID1042"
+	no-loop
+	when
+		R5RulesBean( menuLevel1Selected == "SA" ) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41042");
+		transferRulesState.setQualificationResult("7559");
+end
+
+rule "ID1043"
+	no-loop
+	when
+		R5RulesBean( menuLevel1Selected == R5RulesBean.MENUOPTION_ERROR ) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41043");
+		transferRulesState.setQualificationResult("7558");
+end
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "9999_SET_RETURN_QUEUENAME"
+  salience -10000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

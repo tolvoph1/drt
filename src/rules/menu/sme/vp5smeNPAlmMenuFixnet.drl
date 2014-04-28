@@ -1,0 +1,40 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeNPAlmMenuFixnet.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R2RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption npAlmOther() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPOTHERALM");
+  	  option.setPrompt("leerprompt");
+  	  option.setAction("CONTINUE");
+  	  return option;
+} 
+
+/*
+   Static menu with only one "CONTINUE" option => no menu offered
+
+*/
+
+rule "Static_NewProductMenu_Fixnet"
+	no-loop
+	when
+	then
+		menuOptions.add(npAlmOther());
+end

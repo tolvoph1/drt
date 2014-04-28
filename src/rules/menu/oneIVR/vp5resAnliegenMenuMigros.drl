@@ -1,0 +1,60 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuMigros.drl 72 2013-09-09 14:00:21Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-09 16:00:21 +0200 (Mon, 09 Sep 2013) $
+ * $Revision: 72 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption mobile() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("menue-anliegen-mm-mobtel-mobint");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption internet() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INPH");
+  	  option.setPrompt("menue-anliegen-mm-int-fix");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption tv() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("menue-anliegen-mm-tv");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+ 
+/*
+	Fixed menu
+*/
+rule "AnliegenMenu"
+	no-loop
+	when
+
+	then
+	  menuOptions.add(mobile()); 
+	  menuOptions.add(internet()); 
+	  menuOptions.add(tv()); 	  
+end
+
+ 

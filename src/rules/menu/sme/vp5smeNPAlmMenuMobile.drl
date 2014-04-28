@@ -1,0 +1,46 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeNPAlmMenuMobile.drl 117 2013-09-16 14:13:44Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-16 16:13:44 +0200 (Mon, 16 Sep 2013) $
+ * $Revision: 117 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R2RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption npAlmOther() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPOTHERALM");
+  	  option.setPrompt("npalm-other");
+  	  option.setAction("CONTINUE");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Transfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1TRANSFER");
+  	  option.setPrompt("npalm-Iphone5");
+  	  option.setEmergencyText("NPIPHONE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+ 
+
+rule "Static_NewProductMenu_Mobile"
+	no-loop
+	when
+	then
+		menuOptions.add(npAlm1Transfer());
+		menuOptions.add(npAlmOther());
+end

@@ -1,0 +1,89 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuMobileNacht.drl 202 2014-03-05 12:04:28Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-03-05 13:04:28 +0100 (Wed, 05 Mar 2014) $
+ * $Revision: 202 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption kundendienstTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("KUNDENDIENST");
+  	  option.setPrompt("alm-kundendienst");
+  	  option.setEmergencyText("SF");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption stoerungMenu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-stoerung");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("MENU");
+  	  return option;
+}
+
+function ExtendedMenuOption stoerungTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-stoerung");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+ 
+/*
+   Static menu 1st level to force selection of STOERUNG
+*/
+rule "RES_MobileNacht"
+	no-loop
+	when
+ 	  handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+	then
+      menuOptions.add(kundendienstTransfer());
+      menuOptions.add(stoerungMenu());
+      handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );  
+end
+
+rule "RES_MobileNacht_N_Stack"
+	no-loop
+	salience 1000
+	when
+ 	  	customerProducts: CustomerProducts()
+		handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+		eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		)
+	then
+      menuOptions.add(kundendienstTransfer());
+      menuOptions.add(stoerungTransfer());
+      handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );  
+end
+ 

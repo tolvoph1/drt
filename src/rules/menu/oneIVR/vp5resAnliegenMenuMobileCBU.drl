@@ -1,0 +1,92 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuMobileCBU.drl 147 2013-11-13 12:35:18Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-11-13 13:35:18 +0100 (Wed, 13 Nov 2013) $
+ * $Revision: 147 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption kundendienstTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("KUNDENDIENST");
+  	  option.setPrompt("alm-kundendienst");
+  	  option.setEmergencyText("UNDEFINED-SF");
+  	  // emergency text is undefined as state rules don't specify a SERVICE for this menu
+  	  // so the pre-INAS code won't find a nottexte
+  	  // but the menu option id is listed as having an INAS DP of SF.
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption stoerungTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-stoerung");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+// CRQ2012-014 CBU Customers with special product get no anliegenmenu but direct transfer
+function ExtendedMenuOption transferALM() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TRANSFERALM");
+  	  option.setPrompt("");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Fixed default menu 
+*/
+rule "AnliegenMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+	then
+      menuOptions.add(kundendienstTransfer());
+      menuOptions.add(stoerungTransfer());
+      handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "AnliegenMenu_MDSV4"
+	no-loop
+	salience 100
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+		callProfile: CallProfile()
+		customerProducts: CustomerProducts()
+		eval (
+			StringUtils.equals("MDS End User Support",callProfile.getOptionOfferName()) &&
+			R5RulesBean.isWithinOfficeHours(2,7,800,1800,(String)callProfile.get("SysCVTdate"))
+		)
+	then
+		menuOptions.add(transferALM());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end

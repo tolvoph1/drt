@@ -1,0 +1,86 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5cbu-0800824825-menu-level1.drl 31 2013-09-04 11:42:33Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-04 13:42:33 +0200 (Wed, 04 Sep 2013) $
+ * $Revision: 31 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption sa() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SA");
+  	  option.setPrompt("alm-serviceassurance");
+  	  option.setSkill("SA");
+  	  option.setEmergencyText("SA"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption sf() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SF");
+  	  option.setPrompt("alm-servicefulfilment");
+  	  option.setSkill("SF");
+  	  option.setEmergencyText("SF"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption transferALM() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TRANSFERALM");
+  	  option.setPrompt("");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+rule "0800824825_Level1"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+	then
+		menuOptions.add(sf());
+		menuOptions.add(sa());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "0800824825_Level1_MDSV4"
+	no-loop
+	salience 100
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+		callProfile: CallProfile()
+		eval (
+			StringUtils.equals("MDS End User Support",callProfile.getOptionOfferName()) &&
+			R5RulesBean.isWithinOfficeHours(2,7,800,1800,(String)callProfile.get("SysCVTdate"))
+		)
+	then
+		menuOptions.add(transferALM());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end

@@ -1,0 +1,448 @@
+package com.nortel.ema.swisscom.bal.state
+
+/*
+	@(#) $Id: vp5res-ausland-wireless-state.drl 213 2014-03-17 08:08:23Z tolvoph1 $
+	$Author: tolvoph1 $
+	
+	CRQ2012-020 State Rules for Wireless International callers
+	SwitchRules is done in EXAMPLE-main state rules at the beginning after the SETLANG
+	
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "001_Init_R5RulesBean"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to populate the beans used for easier reading, writing and changing of the rules
+*/
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+// Init state just proceeds to Welcome
+rule "010_Init"
+	no-loop
+	when
+		CallProfile ( nextState == "Init") 
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");		
+		serr.setNextState("Welcome");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "020_Welcome_OpeningHours"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKOH");
+		serr.setOutputVar1("OH_RES_WELCOME");
+		serr.setNextState("WelcomeActual");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Welcome prompt */
+rule "030a1_WelcomeActual_MultiLanguage_PlayWelcomeTrue_Morning"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", playwelc != "false", resultOH == "morning" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-morning-Multilingual");
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a2_WelcomeActual_MultiLanguage_PlayWelcomeTrue_Day"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", playwelc != "false", resultOH == "day" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-day-Multilingual");
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a3_WelcomeActual_MultiLanguage_PlayWelcomeTrue_Evening"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", playwelc != "false", resultOH == "evening" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-evening-Multilingual");
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a4_WelcomeActual_MultiLanguage_PlayWelcomeTrue_Default"
+	no-loop
+	salience -1
+	when
+		CallProfile ( nextState == "WelcomeActual", playwelc != "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-general-Multilingual");
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030b_WelcomeActual_MultiLanguage_PlayWelcomeFalse"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", playwelc == "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Language Selection */
+rule "040_LangSelect"
+	no-loop
+	when
+		CallProfile ( nextState == "LanguageSelection" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("LANGSELECT");
+		serr.setNextState("OpeningHoursGlobal");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Global Opening Hours check
+*/
+
+rule "050_OpeningHoursGlobal"
+	no-loop
+	when
+		CallProfile ( nextState == "OpeningHoursGlobal" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKOH");
+		serr.setOutputVar1("OH_RES_Global");
+		serr.setNextState("CheckOHGlobalResult");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Check Result of opening hours check
+*/
+rule "060a_CheckOHGlobalResult_Closed"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckOHGlobalResult", resultOH == "1" ) 
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("closed-bye");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "060b_CheckOHGlobalResult_Open"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckOHGlobalResult", resultOH != "1" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Info");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Global Information Prompts - Played as fetch audio */
+rule "070_Info_TarifInfo"
+	no-loop
+	when
+		CallProfile ( nextState == "Info" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("ausland-tarif");
+		serr.setNextState("EmergencyAnnouncements");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Set INAS Actions before switching rules */
+rule "080_EmergencyAnnouncements_Set"
+	no-loop
+	when
+		CallProfile ( nextState == "EmergencyAnnouncements" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETINASACTIONS");
+		serr.setOutputVar1("RES");
+		serr.setNextState("SpeakINAS"); 
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "090_EmergencyAnnouncements_Exec"
+	no-loop
+	when
+		CallProfile ( nextState == "SpeakINAS" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXECINASACTIONS");
+		serr.setOutputVar1("MAIN");
+		serr.setNextState("GetCARSStatus");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "095_GetCARSStatus"
+	no-loop
+	when
+		CallProfile ( nextState == "GetCARSStatus" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CARSSTATUS");
+		serr.setNextState("RecallerCampaign");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "100a_RecallerCampaign_Active"
+	no-loop
+	when
+		serviceConfiguration: ServiceConfigurationMap()
+		callProfile: CallProfile ( nextState == "RecallerCampaign" )
+		eval (
+			StringUtils.equals((String)serviceConfiguration.get("vp.res.recaller.active"),"true") &&
+			!StringUtils.isEmpty((String)callProfile.getSysOrsSessionID())
+		)
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXECINASACTIONS");
+		serr.setOutputVar1("RECALLER");
+		serr.setNextState("CheckForRecaller");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "100b_RecallerCampaign_InActive"
+	no-loop
+	salience -100
+	when
+		CallProfile ( nextState == "RecallerCampaign" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// CRQ2013-018 Blocked callers should not get recaller
+
+rule "100c_RecallerCampaign_Kassensperre"
+	no-loop
+	salience 1000
+	when
+		CallProfile ( nextState == "RecallerCampaign" )
+		customerProfile: CustomerProfile ()
+		eval ( customerProfile.getCarsStatus() != null && 
+				( customerProfile.getCarsStatus().contains("block") ||
+				  customerProfile.getCarsStatus().contains("creditLimitBlock"))
+		     )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+rule "110a_CheckForRecaller_skipRecaller"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckForRecaller", genericINASAction == "skipRecaller" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "110b_CheckForRecaller"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckForRecaller", genericINASAction != "skipRecaller" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKFORRECALLER");
+		serr.setNextState("CheckResultCheckForRecaller");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120a_CheckResultCheckForRecaller_NoRecaller"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckResultCheckForRecaller", recallerStatus != "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120b_CheckResultCheckForRecaller_Recaller_HaveRoutingIDandRuleID"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "CheckResultCheckForRecaller", recallerStatus == "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+		eval (
+			!StringUtils.isEmpty(callProfile.getRecallerRoutingID())&&
+			!StringUtils.isEmpty(callProfile.getRecallerRuleID())
+		)
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("TransferRecaller");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120c_CheckResultCheckForRecaller_Recaller_RoutingIDandorRuleID_missing"
+	no-loop
+	salience -10
+	when
+		callProfile: CallProfile ( nextState == "CheckResultCheckForRecaller", recallerStatus == "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "130_TransferRecaller"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "TransferRecaller" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFERRID");
+		serr.setOutputVar1(callProfile.getRecallerRoutingID());
+		serr.setOutputVar2(callProfile.getRecallerRuleID());
+		serr.setOutputVar3("true");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "200_Disconnect"
+	no-loop
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "201_GoodbyeDisconnect"
+	no-loop
+	when
+		CallProfile ( nextState == "GoodbyeDisconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("GOODBYE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "503_Transfer"
+	no-loop
+	when
+		CallProfile ( nextState == "Transfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1("oneIVR/vp5resTransfer");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+/* State for Exceptions caught by StateEngine Event Handlers */
+rule "900_InputError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "InputError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "901_ConnectorError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "ConnectorError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "902_TechError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "TechError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Catch-All States */
+rule "998_FALLBACK_TRANSFER"
+	no-loop
+	salience -10000
+	when
+		CallProfile ( nextState != "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "999_FALLBACK_DISCONNECT"
+	no-loop
+	salience -20000
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setNextState("ThisShouldNeverHappen");
+		serr.setState(StateEngineRulesResult.DONE);
+end

@@ -1,0 +1,73 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resProduktMenuMigros.drl 72 2013-09-09 14:00:21Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-09 16:00:21 +0200 (Mon, 09 Sep 2013) $
+ * $Revision: 72 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption prepaid() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PRE");
+  	  option.setPrompt("menue-prod-mm-mob-prepaid");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption mobileabo() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PP");
+  	  option.setPrompt("menue-prod-mm-mob-abo");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption internet() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("IN");
+  	  option.setPrompt("menue-prod-mm-mob-int");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "00_Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+// Product menu only exists for Anliegenmenu=Mobile, so no check for selection in Anliegenmenu required
+rule "10_ProduktMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+	then
+		menuOptions.add(prepaid()); 
+		menuOptions.add(mobileabo()); 
+		menuOptions.add(internet());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+
+
+ 

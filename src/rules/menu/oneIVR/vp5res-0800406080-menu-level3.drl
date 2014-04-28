@@ -1,0 +1,50 @@
+/*
+ * (c)2014 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5res-0800406080-menu-level3.drl 223 2014-03-20 13:34:09Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-03-20 14:34:09 +0100 (Thu, 20 Mar 2014) $
+ * $Revision: 223 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption access() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SMEACCESS");
+  	  option.setPrompt("pm-accessprobleme");
+  	  option.setEmergencyText("SMEACCESS");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption service() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SERVICE");
+  	  option.setPrompt("pm-serviceprobleme");
+  	  option.setEmergencyText("SERVICE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+// Statisches Menue, da es nur unter einer Menüoption angeboten wird
+rule "TASMenuLevel3"
+	no-loop
+	when
+
+	then
+	  menuOptions.add(access()); 
+	  menuOptions.add(service());
+end
+
+ 

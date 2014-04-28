@@ -1,0 +1,327 @@
+package com.nortel.ema.swisscom.bal.rules.cbu
+
+/*
+	@(#) $Id: vp5cbu-0800870875-transfer.drl 28 2013-08-28 11:36:27Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+
+/*
+ 	ID 906: CBU Portal, Products: none, Segment: All, PIN 7247 (Code OWP), Routing ID 7508
+*/
+rule "ID0906"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "7247" )
+	then
+		transferRulesState.setIdentificationResult("40906");
+		transferRulesState.setQualificationResult("7527");
+end
+
+/*
+ 	ID 907: CBU Portal, Products: none, Segment: All, PIN 349 (Code Fixnet), Routing ID 7529
+*/
+rule "ID0907"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "349" )
+	then
+		transferRulesState.setIdentificationResult("40907");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 908: CBU Portal, Products: none, Segment: All, PIN 262 (Code CNA), Routing ID 7527
+*/
+rule "ID0908"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "262" )
+	then
+		transferRulesState.setIdentificationResult("40908");
+		transferRulesState.setQualificationResult("7527");
+end
+
+/*
+ 	ID 909: CBU Portal, Products: none, Segment: All, PIN error , Routing ID 7529
+*/
+rule "ID0909"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "error" )
+	then
+		transferRulesState.setIdentificationResult("40909");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 910: CBU Portal, Products: none, Segment: All, PIN 843 (Code Novartis), Routing ID 7527
+*/
+rule "ID0910"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "843" )
+	then
+		transferRulesState.setIdentificationResult("40910");
+		transferRulesState.setQualificationResult("7527");
+end
+
+/*
+ 	ID 911: CBU Portal, Products: none, Segment: All, PIN 937 (Code ZFS), Routing ID 7529
+*/
+rule "ID0911"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "937" )
+	then
+		transferRulesState.setIdentificationResult("40911");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 912: CBU Portal, Products: none, Segment: All, PIN 4357 , Routing ID 7529
+*/
+rule "ID0912"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "4357" )
+	then
+		transferRulesState.setIdentificationResult("40912");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 913: CBU Portal, Products: none, Segment: All, PIN 23646 (Code Admin), Routing ID 7529
+*/
+rule "ID0913"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "23646" )
+	then
+		transferRulesState.setIdentificationResult("40913");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 914: CBU Portal, Products: none, Segment: All, PIN 87425 (Code Trial), Routing ID 7529
+*/
+rule "ID0914"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "87425" )
+	then
+		transferRulesState.setIdentificationResult("40914");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 915: CBU Portal, Products: none, Segment: All, PIN 273348 (Code Credit), Routing ID 7529
+*/
+rule "ID0915"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "273348" )
+	then
+		transferRulesState.setIdentificationResult("40915");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 916: CBU Portal, Products: none, Segment: All, PIN 746 (Code RIM), Routing ID 7529
+*/
+rule "ID0916"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "746" )
+	then
+		transferRulesState.setIdentificationResult("40916");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 917: CBU Portal, Products: none, Segment: All, PIN 7278 (Code RIM), Routing ID 7529
+*/
+rule "ID0917"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "7278" )
+	then
+		transferRulesState.setIdentificationResult("40917");
+		transferRulesState.setQualificationResult("7529");
+end
+
+/*
+ 	ID 918: CBU Portal, Products: none, Segment: All, PIN 672 (Code OnePhone), Routing ID 7521
+*/
+rule "ID0918"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "672" )
+	then
+		transferRulesState.setIdentificationResult("40918");
+		transferRulesState.setQualificationResult("7527");
+end
+
+/*
+ 	ID 1022: CBU Portal, Products: none, Segment: All, PIN 252 (Code Julius Baer), Routing ID 7508
+*/
+rule "ID1022"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "252" )
+	then
+		transferRulesState.setIdentificationResult("41022");
+		transferRulesState.setQualificationResult("7527");
+end
+
+/*
+ 	ID 1054: CBU Portal, Products: none, Segment: All, PIN 637 (MDS PIN), Routing ID 7544
+*/
+rule "ID1054"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "637" )
+	then
+		transferRulesState.setIdentificationResult("41054");
+		transferRulesState.setQualificationResult("7544");
+end
+
+/*
+ 	ID 1055: CBU Portal, Products: none, Segment: All, PIN 63722 (MDS BB), Routing ID 7545
+*/
+rule "ID1055"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "63722" )
+	then
+		transferRulesState.setIdentificationResult("41055");
+		transferRulesState.setQualificationResult("7545");
+end
+
+/*
+ 	ID 1056: CBU Portal, Products: none, Segment: All, PIN 63764 (MDS MI), Routing ID 7546
+*/
+rule "ID1056"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( pin == "63764" )
+	then
+		transferRulesState.setIdentificationResult("41056");
+		transferRulesState.setQualificationResult("7546");
+end
+
+/*
+ 	ID 1025: CBU Portal, Fallback rule, Routing ID 7175
+*/
+rule "ID1025_FALLBACK"
+	no-loop
+	salience -1000
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41025");
+		transferRulesState.setQualificationResult("7175");
+end
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -10000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

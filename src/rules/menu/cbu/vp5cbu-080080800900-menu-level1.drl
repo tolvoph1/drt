@@ -1,0 +1,65 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-080080800900-menu-level1.drl 236 2014-04-15 12:36:40Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-04-15 14:36:40 +0200 (Tue, 15 Apr 2014) $
+ * $Revision: 236 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.inas;
+
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption billing() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("BILLING");
+  	  option.setPrompt("kd-cbu-menu1-billing");
+  	  option.setAction("BILLING");
+  	  return option;
+} 
+
+function ExtendedMenuOption extranet() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("EXTRANET");
+  	  option.setPrompt("kd-cbu-menu1-extranet");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption other() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("OTHER");
+  	  option.setPrompt("kd-cbu-menu1-other");
+  	  option.setAction("OTHER");
+  	  return option;
+} 
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+// Menu
+rule "Menu"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.ANLIEGENMENU_DONE)	
+	then
+		menuOptions.add(billing());
+		menuOptions.add(extranet());
+		menuOptions.add(other());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end

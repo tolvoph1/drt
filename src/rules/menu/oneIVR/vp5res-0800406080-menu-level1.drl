@@ -1,0 +1,72 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5res-0800406080-menu-level1.drl 223 2014-03-20 13:34:09Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-03-20 14:34:09 +0100 (Thu, 20 Mar 2014) $
+ * $Revision: 223 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption tas1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ACCESSDSL");
+  	  option.setPrompt("tas-alm-access-dsl");
+  	  option.setEmergencyText("ACCESSDSL");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tas2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PHONE");
+  	  option.setPrompt("tas-alm-telefonie");
+  	  option.setEmergencyText("PHONE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tas3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("tas-alm-freeze");
+  	  option.setEmergencyText("FREEZE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tas4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ALLIPFTTH");
+  	  option.setPrompt("tas-alm-allip-ftth");
+  	  option.setEmergencyText("ALLIPFTTH");
+  	  option.setAction("MENU");
+  	  return option;
+}
+ 
+/*
+	Fixed menu
+*/
+rule "AnliegenMenu"
+	no-loop
+	when
+
+	then
+	  menuOptions.add(tas1()); 
+	  menuOptions.add(tas2());
+	  menuOptions.add(tas3());
+	  menuOptions.add(tas4()); 
+end
+
+ 

@@ -1,0 +1,252 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resProduktMenuFixnet2200.drl 153 2013-11-25 09:43:09Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-11-25 10:43:09 +0100 (Mon, 25 Nov 2013) $
+ * $Revision: 153 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp5resProduktMenuFixnet2200
+
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption phoneSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PHONE");
+  	  option.setPrompt("pm-telefonie");
+  	  option.setEmergencyText("SA-TELEFONIE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption internetSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INTERNET");
+  	  option.setPrompt("pm-internet");
+  	  option.setEmergencyText("SA-INTERNET");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tvSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("pm-tv");
+  	  option.setEmergencyText("SA-TV");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to generate Product clusters. If location of information
+	or String values change only these rules need to be changed
+*/
+rule "GenerateProductClusterFixnet"
+	no-loop
+	salience 10000
+	when
+		custProducts : com.nortel.ema.swisscom.bal.vo.model.CustomerProducts( ) 
+		eval ( 
+				custProducts.contains("EconomyLine") ||
+				custProducts.contains("MultiLine ISDN") ||
+				custProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null)
+			 );
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterFixnet(true);
+end
+
+rule "GenerateProductClusterInternet"
+	no-loop
+	salience 10000
+	when
+		custProducts : com.nortel.ema.swisscom.bal.vo.model.CustomerProducts( ) 
+		eval (
+				( 
+					custProducts.contains("Bluewin Phone") ||
+					custProducts.contains("FX Bluewin DSL") ||
+					custProducts.contains("FX Bluewin nakedAccount") ||
+					custProducts.contains("FX Bluewin Dial-Up") ||
+					custProducts.contains("DSL_Mobile") ||
+					custProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null) ||
+					custProducts.contains("Wireless Home Connection")
+				 )   
+			)
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterInternet(true);		
+end
+
+rule "GenerateProductClusterTV"
+	no-loop
+	salience 10000
+	when
+		custProducts : com.nortel.ema.swisscom.bal.vo.model.CustomerProducts( ) 
+		eval ( 
+			custProducts.contains("BluewinTV") ||
+			custProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null) 
+		);
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterTV(true);
+end
+
+rule "ProduktMenu_ALM_Stoerung_FX_only"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == true, 
+							  hasProductClusterInternet == false, 
+							  hasProductClusterTV == false )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(phoneSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "ProduktMenu_ALM_Stoerung_IN_only"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == false, 
+							  hasProductClusterInternet == true, 
+							  hasProductClusterTV == false )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(internetSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "ProduktMenu_ALM_Stoerung_TV_only"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == false, 
+							  hasProductClusterInternet == false, 
+							  hasProductClusterTV == true )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(tvSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "ProduktMenu_ALM_Stoerung_FX_TV"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == true, 
+							  hasProductClusterInternet == false, 
+							  hasProductClusterTV == true )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(tvSA());
+		menuOptions.add(phoneSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "ProduktMenu_ALM_Stoerung_FX_IN"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == true, 
+							  hasProductClusterInternet == true, 
+							  hasProductClusterTV == false )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(internetSA());
+		menuOptions.add(phoneSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+rule "ProduktMenu_ALM_Stoerung_FX_IN_TV"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE,
+							  hasProductClusterFixnet == true, 
+							  hasProductClusterInternet == true, 
+							  hasProductClusterTV == true )
+		callProfile : CallProfile( ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(phoneSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+// CRQ2012-088 Vivo Libero Customers pressing 1 for product without number
+rule "ProduktMenu_ALM_Stoerung_Customer_Without_Number"
+	no-loop
+	salience 1000
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE)
+		callProfile : CallProfile( customerType == "NoNumber" ) 
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+
+ // The Fallback rules trigger when there is an unexpected selection in the Anliegenmenu, or an expected one 
+ // for which no decision could be made in the above rules. 
+ 
+rule "FALLBACK_FULL_PRODUKTMENU_ALM_STOERUNG"
+	activation-group "ProduktMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.PRODUKTMENU_DONE )
+    	callProfile : CallProfile( )     	
+		eval (
+			 StringUtils.equals("STOERUNG",(String)callProfile.get("oneIVRresAnliegenMenu"))
+			  )
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(phoneSA());
+	    handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end

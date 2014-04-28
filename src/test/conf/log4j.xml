@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "../../log4j.dtd">
+
+<!--
+	(c)2007 Nortel Networks Limited. All Rights Reserved.
+
+	Id: $Id: log4j.xml 78 2013-09-09 15:18:53Z tolvoph1 $
+	Author: $Author: tolvoph1 $
+	Date: $Date: 2013-09-09 17:18:53 +0200 (Mon, 09 Sep 2013) $
+	Revision: $Revision: 78 $
+
+	Configuration of Log4J logging.
+-->
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="false">
+
+<!--    Append to the console -->
+    <appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="DEBUG"/>
+
+        <layout class="org.apache.log4j.PatternLayout">
+<!--        The default pattern: Date Priority [Category] Message\n -->
+<!--        <param name="ConversionPattern" value="%d{ISO8601} %X{callID} %X{backend} %X{module} %X{methodName} %-5p [%c{1}] %m%n"/> -->
+            <param name="ConversionPattern" value="[%t] %d{ISO8601} %-5p %X{callID} %X{backend} %X{module} %X{method} %m%n"/>            
+        </layout>
+    </appender>
+    
+        <appender name="DEBUGFILE" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="src/test/logs/testoutput.log"/>
+        <param name="Append" value="true"/>
+        <param name="Threshold" value="DEBUG"/>
+
+        <!-- Rollover at midnight each day -->
+        <param name="DatePattern" value="'.'yyyy-MM-dd"/>
+
+        <layout class="org.apache.log4j.PatternLayout">
+<!--        The default pattern: Date Priority [Category] Message\n -->
+            <param name="ConversionPattern" value="[%t] %d{ISO8601} %-5p %-24.24X{callID} %-10.10X{backend} %-40.40X{module} %-40.40X{method} %m%n"/>
+        </layout>
+    </appender>
+    
+
+    <category name="org.apache">
+        <priority value="INFO"/>
+    </category>
+
+<!--     Limit the org.apache.commons category to INFO as its DEBUG is verbose -->
+    <category name="org.apache.commons">
+        <priority value="INFO"/>
+    </category>
+
+<!--     Limit the org.apache.axis category to INFO as its DEBUG is verbose -->
+    <category name="org.apache.axis">
+        <priority value="INFO"/>
+    </category>
+
+<!--     Limit the org.hibernate category to INFO as its DEBUG is verbose -->
+    <category name="org.hibernate">
+        <priority value="INFO"/>
+    </category>
+    
+<!--     Uncomment to get sql and parameters output to logs. Requires restart to take effect. -->
+<!--
+    <category name="org.hibernate.SQL">
+        <priority value="DEBUG"/>
+    </category>
+    
+    <category name="org.hibernate.type">
+        <priority value="TRACE"/>
+    </category>
+-->
+<!--     Limit the org.springframework category to INFO as its DEBUG is verbose -->
+    <category name="org.springframework">
+        <priority value="INFO"/>
+    </category>
+
+<!--     Limit the org.apache.struts category to INFO as its DEBUG is verbose -->
+    <category name="org.apache.struts">
+        <priority value="INFO"/>
+    </category>
+    
+<!--     Limit the org.apache.jasper.servlet category to WARN as its DEBUG is verbose -->
+    <category name="org.apache.jasper.servlet">
+        <priority value= "WARN"/>
+    </category>
+
+<!--     Set all nortel classes to info level -->
+    <category name="com.nortel.ema">
+        <priority value="INFO"/>
+    </category>
+    
+    <!--  This controls the timing diagnostics for the method calls, turned on if set to DEBUG. -->
+    <category name="com.nortel.ema.swisscom.bal.logging.LoggingContext">
+        <priority value="INFO"/>
+    </category>
+    
+<!--     Setup the root logger -->
+    <root>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="DEBUGFILE"/>
+    </root>
+
+</log4j:configuration>

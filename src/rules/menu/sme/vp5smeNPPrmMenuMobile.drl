@@ -1,0 +1,263 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeNPPrmMenuMobile.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption smeNPAlm1Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM1");
+  	  option.setPrompt("npprm-alm1-example1");
+  	  option.setSkill("NPALM1PRM1");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm1Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM2");
+  	  option.setPrompt("npprm-alm1-example2");
+  	  option.setSkill("NPALM1PRM2");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm1Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM3");
+  	  option.setPrompt("npprm-alm1-example3");
+  	  option.setSkill("NPALM1PRM3");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm1Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM4");
+  	  option.setPrompt("npprm-alm1-example4");
+  	  option.setSkill("NPALM1PRM4");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm1Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM5");
+  	  option.setPrompt("npprm-alm1-example5");
+  	  option.setSkill("NPALM1PRM5");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm2Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM1");
+  	  option.setPrompt("npprm-alm2-example1");
+  	  option.setSkill("NPALM2PRM1");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm2Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM2");
+  	  option.setPrompt("npprm-alm2-example2");
+  	  option.setSkill("NPALM2PRM2");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm2Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM3");
+  	  option.setPrompt("npprm-alm2-example3");
+  	  option.setSkill("NPALM2PRM3");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm2Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM4");
+  	  option.setPrompt("npprm-alm2-example4");
+  	  option.setSkill("NPALM2PRM4");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm2Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM5");
+  	  option.setPrompt("npprm-alm2-example5");
+  	  option.setSkill("NPALM2PRM5");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm3Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM1");
+  	  option.setPrompt("npprm-alm3-example1");
+  	  option.setSkill("NPALM3PRM1");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm3Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM2");
+  	  option.setPrompt("npprm-alm3-example2");
+  	  option.setSkill("NPALM3PRM2");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm3Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM3");
+  	  option.setPrompt("npprm-alm3-example3");
+  	  option.setSkill("NPALM3PRM3");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm3Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM4");
+  	  option.setPrompt("npprm-alm3-example4");
+  	  option.setSkill("NPALM3PRM4");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm3Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM5");
+  	  option.setPrompt("npprm-alm3-example5");
+  	  option.setSkill("NPALM3PRM5");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm4Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM1");
+  	  option.setPrompt("npprm-alm4-example1");
+  	  option.setSkill("NPALM4PRM1");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm4Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM2");
+  	  option.setPrompt("npprm-alm4-example2");
+  	  option.setSkill("NPALM4PRM2");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm4Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM3");
+  	  option.setPrompt("npprm-alm4-example3");
+  	  option.setSkill("NPALM4PRM3");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm4Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM4");
+  	  option.setPrompt("npprm-alm4-example4");
+  	  option.setSkill("NPALM4PRM4");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption smeNPAlm4Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM5");
+  	  option.setPrompt("npprm-alm4-example5");
+  	  option.setSkill("NPALM4PRM5");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+ 
+/*
+   
+    This is the 2nd level new product menu aka "product menu"
+ 
+    There is one rule for each selection in the 1st level menu.
+
+*/
+
+// Product menu for mobile when caller selected option 1 in ALM
+rule "Static_NewProductMenu_ALM1_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM1".equals(callProfile.get("smeNPAlmMenuMobile")) )
+	then
+		menuOptions.add(smeNPAlm1Prm1());
+		menuOptions.add(smeNPAlm1Prm2());
+		menuOptions.add(smeNPAlm1Prm3());
+		menuOptions.add(smeNPAlm1Prm4());
+		menuOptions.add(smeNPAlm1Prm5());
+end
+
+// Product menu for mobile when caller selected option 2 in ALM
+rule "Static_NewProductMenu_ALM2_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM2".equals(callProfile.get("smeNPAlmMenuMobile")) )
+	then
+		menuOptions.add(smeNPAlm2Prm1());
+		menuOptions.add(smeNPAlm2Prm2());
+		menuOptions.add(smeNPAlm2Prm3());
+		//menuOptions.add(smeNPAlm2Prm4());
+		//menuOptions.add(smeNPAlm2Prm5());
+end
+
+// Product menu for mobile when caller selected option 3 in ALM
+rule "Static_NewProductMenu_ALM3_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM3".equals(callProfile.get("smeNPAlmMenuMobile")) )
+	then
+		menuOptions.add(smeNPAlm3Prm1());
+		menuOptions.add(smeNPAlm3Prm2());
+		menuOptions.add(smeNPAlm3Prm3());
+		menuOptions.add(smeNPAlm3Prm4());
+		menuOptions.add(smeNPAlm3Prm5());
+end
+
+// Product menu for mobile when caller selected option 4 in ALM
+rule "Static_NewProductMenu_ALM4_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM4".equals(callProfile.get("smeNPAlmMenuMobile")) )
+	then
+		menuOptions.add(smeNPAlm4Prm1());
+		menuOptions.add(smeNPAlm4Prm2());
+		menuOptions.add(smeNPAlm4Prm3());
+		menuOptions.add(smeNPAlm4Prm4());
+		menuOptions.add(smeNPAlm4Prm5());
+end

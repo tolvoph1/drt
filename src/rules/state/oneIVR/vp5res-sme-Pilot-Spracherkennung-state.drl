@@ -1,0 +1,236 @@
+package com.nortel.ema.swisscom.bal.state
+
+/*
+	@(#) $Id: vp5res-sme-Pilot-Spracherkennung-state.drl 228 2014-03-31 08:38:37Z tolvoph1 $
+	$Author: tolvoph1 $
+
+	State Rules fuer den Pilot Spracherkennung
+	RES und SME verwenden dieselben Rules, daher der Dateiname mit res-sme im Namen.
+	Die Rules werden nur im state/oneIVR Verzeichnis abgelegt und vom SME Portal
+	von dort angesprochen. 
+	
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "001_Init_R5RulesBean"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+rule "010_Init"
+	no-loop
+	when
+		CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");	
+		serr.setNextState("Welcome");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "020a_Welcome_OpeningHours_nonSME"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome", businesstyp != "SME" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKOH");
+		serr.setOutputVar1("OH_RES_WELCOME");
+		serr.setNextState("WelcomeActual");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* SME hat keine tagesabhaengigen Oeffnungszeiten, daher Welcome Prompt sprechen und
+   direkt zu Record */
+rule "020b_Welcome_OpeningHours_SME"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome", businesstyp == "SME" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome");
+		serr.setNextState("Record");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a1_WelcomeActual_Morning"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "WelcomeActual", resultOH == "morning" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-morning");
+		serr.setNextState("Record");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a2_WelcomeActual_Day"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "WelcomeActual", resultOH == "day" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-day");
+		serr.setNextState("Record");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a3_WelcomeActual_Evening"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "WelcomeActual", resultOH == "evening" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-evening");
+		serr.setNextState("Record");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a4_WelcomeActual_Default"
+	no-loop
+	salience -1
+	when
+		callProfile: CallProfile ( nextState == "WelcomeActual" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-general");
+		serr.setNextState("Record");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "040_Record"
+	no-loop
+	when
+		CallProfile ( nextState == "Record" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("RECORD");	
+		serr.setOutputVar1("30");
+		serr.setOutputVar2("2");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "050a_Transfer_RES"
+	no-loop
+	when
+		CallProfile ( nextState == "Transfer", businesstyp == "RES" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SWITCHRULES");
+		serr.setOutputVar1("oneIVR/vp5res-0800800800-state");
+		serr.setNextState("OpeningHoursGlobal");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "050b_Transfer_SME"
+	no-loop
+	when
+		CallProfile ( nextState == "Transfer", businesstyp == "SME" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFERRID");
+		serr.setOutputVar1("8560");
+		serr.setOutputVar2("42500");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "050c_Transfer_Fallback"
+	no-loop
+	salience -10
+	when
+		CallProfile ( nextState == "Transfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1("oneIVR/vp5resTransfer");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "200_Disconnect"
+	no-loop
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* State for Exceptions caught by StateEngine Event Handlers */
+rule "900_InputError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "InputError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "901_ConnectorError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "ConnectorError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "902_TechError"
+	no-loop
+	salience -500
+	when
+		CallProfile ( nextState == "TechError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* Catch-All State */
+
+rule "998_FALLBACK_TRANSFER"
+	no-loop
+	salience -10000
+	when
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end

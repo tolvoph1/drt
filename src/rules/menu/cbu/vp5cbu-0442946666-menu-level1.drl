@@ -1,0 +1,81 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0442946666-menu-level1.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption blackberry() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("BB");
+  	  option.setPrompt("alm-bb");
+  	  option.setSkill("BB");
+  	  option.setEmergencyText("BLACKBERRY");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption voiceAXA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("VOICE_AXA");
+  	  option.setPrompt("alm-voiceAXA");
+  	  option.setSkill("VOICE_AXA");
+  	  option.setEmergencyText("INCIDENT-VOICE"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption dataAXA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("DATA_AXA");
+  	  option.setPrompt("alm-dataAXA");
+  	  option.setSkill("DATA_AXA");
+  	  option.setEmergencyText("INCIDENT-DATA"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption order() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ORDER");
+  	  option.setPrompt("alm-order");
+  	  option.setSkill("ORDER");
+  	  option.setEmergencyText("ORDER"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+   Static menu 1st level
+      
+   Mapping numeric menu options to actual options:
+	* public static final Long MENU_BB_CS = new Long(4160);     => Blackberry
+	* public static final Long MENU_VOICE_AXA_CS = new Long(4170);     => Incident Voice
+	* public static final Long MENU_DATA_AXA_CS = new Long(4180);     => Incident Data
+	* public static final Long MENU_ORDER = new Long(4030);  => Bestellungen
+*/
+
+
+rule "0442946666_Level1"
+	no-loop
+	when
+
+	then
+		menuOptions.add(blackberry()); //4160
+		menuOptions.add(voiceAXA()); //4170
+		menuOptions.add(dataAXA()); //4180
+		menuOptions.add(order()); //4030
+end

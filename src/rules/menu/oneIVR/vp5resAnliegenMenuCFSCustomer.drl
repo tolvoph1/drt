@@ -1,0 +1,74 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuCFSCustomer.drl 129 2013-10-10 07:47:26Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-10-10 09:47:26 +0200 (Thu, 10 Oct 2013) $
+ * $Revision: 129 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+// Hinweis: Die Aktion TRANSFER ist irrelevant, da die State-Rules diese nicht
+// auswerten
+function ExtendedMenuOption allesAndere() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("AA");
+  	  option.setEmergencyText("AA");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption eventMilitaer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("EM");
+  	  option.setEmergencyText("EM");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption pps() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PPS");
+  	  option.setEmergencyText("PPS");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+rule "AnliegenMenu_CFS_Customer"
+  no-loop
+  when
+    handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+  then
+      menuOptions.add(allesAndere());
+	  menuOptions.add(eventMilitaer());
+      menuOptions.add(pps());
+	  handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );  
+end
+ 
+
+ 

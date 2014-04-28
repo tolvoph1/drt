@@ -1,0 +1,45 @@
+package com.nortel.ema.swisscom.bal.rules.sme.menu
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5sme0800888500menu.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption kundendienst() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("KUNDENDIENST");
+  	  option.setPrompt("alm-kundendienst");
+  	  option.setEmergencyText("SF");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption stoerung() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-stoerung");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+//24x7 menu
+rule "AnliegenMenu_0800888500_24x7"
+	no-loop
+	when
+	then
+		menuOptions.add(stoerung());
+		menuOptions.add(kundendienst());
+end

@@ -1,0 +1,116 @@
+package com.nortel.ema.swisscom.bal.rules.cbu
+
+/*
+	@(#) $Id: vp5cbu-080080800900-transfer.drl 236 2014-04-15 12:36:40Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+rule "MenuLevel1Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel1Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel1Selected((String)callprofile.get("cbukundendienstmenulevel1"));
+end
+
+
+
+rule "ID0801"
+	no-loop
+  	activation-group "QU"
+	when
+		( R5RulesBean( menuLevel1Selected == "OTHER" ) ||
+		  R5RulesBean( menuLevel1Selected == "error" ) )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40801");
+		transferRulesState.setQualificationResult("7025");
+end
+
+rule "ID0802"
+	no-loop
+  	activation-group "QU"
+	when
+		R5RulesBean( menuLevel1Selected == "BILLING" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40802");
+		transferRulesState.setQualificationResult("7273");
+end
+
+rule "ID0803"
+	no-loop
+  	activation-group "QU"
+	when
+		R5RulesBean( menuLevel1Selected == "EXTRANET" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40803");
+		transferRulesState.setQualificationResult("7274");
+end
+
+/*
+ 	ID 1025: CBU Portal, Fallback rule, Routing ID 7175
+*/
+rule "ID1025_FALLBACK"
+	no-loop
+	salience -1000
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41025");
+		transferRulesState.setQualificationResult("7175");
+end
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -10000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

@@ -1,0 +1,362 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeAnliegenMenu.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.sme.menu.vp5smeAnliegenMenueFixnet
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption administration() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ADMINISTRATION");
+  	  option.setPrompt("alm-admin");
+  	  option.setEmergencyText("SF");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption administrationTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ADMINISTRATION");
+  	  option.setPrompt("alm-admin");
+  	  option.setEmergencyText("SF");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption stoerung() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-techsupport");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption stoerungTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-techsupport");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption stoerungPBRDSL() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-techsupport");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("PBRDSLMENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption beratungSAL() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("BERATUNG");
+  	  option.setPrompt("alm-beratung");
+  	  option.setEmergencyText("BERATUNG");
+  	  option.setAction("SAL");
+  	  return option;
+} 
+
+function ExtendedMenuOption beratungTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("BERATUNG");
+  	  option.setPrompt("alm-beratung");
+  	  option.setEmergencyText("BERATUNG");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rule to set businessnumber in the facts bean according to Call Profile
+	Note that if the business number input value changes it needs to be changed later
+	in all rules checking for the businessnumber
+*/
+rule "BusinessNumber"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( businessNumber == R5RulesBean.EMPTY );
+	then
+		handle.setBusinessNumber(callprofile.getBusinessnumber());
+end
+
+/*
+	Rule to set the businesstyp according to the Call Profile
+*/
+rule "BusinessTyp"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( businessTyp == R5RulesBean.EMPTY );			
+	then
+		handle.setBusinessTyp(callprofile.getBusinesstyp());
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+/* Actual rules for the AnliegenMenu, depending on
+   - Business Number
+   - Segment
+*/
+
+
+// Rule for callers NOT having DSL_Mobile Product
+// "Border" hours from Mo-Fr 0700-0800 and 1730-1830 => Beratung should be regular transfer
+rule "AnliegenMenu_0800055055_SME_NO_DSLMOBILE_BORDER"
+	activation-group "AnliegenMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProducts: CustomerProducts()
+		callProfile: CallProfile()
+		eval (
+			  !customerProducts.contains("DSL_Mobile") &&
+			  (
+			    R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) ||
+			    R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			  )
+			 );
+		
+	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+		menuOptions.add(beratungTransfer());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+// Same rule within office hours => Beratung should go to SAL
+rule "AnliegenMenu_0800055055_SME_NO_DSLMOBILE_NO_BORDER"
+	activation-group "AnliegenMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProducts: CustomerProducts()
+		callProfile: CallProfile()
+		eval (
+			  !customerProducts.contains("DSL_Mobile") &&
+			  !R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) &&
+			  !R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			 );
+		
+	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+		menuOptions.add(beratungSAL());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+
+// Rule for callers having DSL_Mobile Product
+rule "AnliegenMenu_0800055055_SME_DSLMOBILE_BORDER"
+	activation-group "AnliegenMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProducts: CustomerProducts()
+		callProfile: CallProfile()
+		eval ( 
+				customerProducts.contains("DSL_Mobile") &&
+				(
+			      R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) ||
+			      R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			     )
+			  );
+		
+	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+		menuOptions.add(beratungTransfer());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+
+rule "AnliegenMenu_0800055055_SME_DSLMOBILE_NO_BORDER"
+	activation-group "AnliegenMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProducts: CustomerProducts()
+		callProfile: CallProfile()
+		eval ( 
+				customerProducts.contains("DSL_Mobile")&&
+			    !R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) &&
+			    !R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			  );
+		
+	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+		menuOptions.add(beratungSAL());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+
+// AnliegenMenu during officehours, when CareManager sa1_ntAccount is defined, Stoerung and Kundendienst
+// will lead to direct transfer
+rule "AnliegenMenu_CareManager_BORDER"
+	activation-group "AnliegenMenu"
+	salience 5000
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProfile: CustomerProfile ()
+		callProfile: CallProfile()
+		eval (
+				customerProfile.getSa1_ntAccount() != null &&
+				customerProfile.getSa1_ntAccount().startsWith("CARMAN") &&
+				(
+			      R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) ||
+			      R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			     )
+			  )
+
+	then
+		menuOptions.add(administrationTransfer());
+		menuOptions.add(stoerungTransfer());
+		menuOptions.add(beratungTransfer());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+
+rule "AnliegenMenu_CareManager_NO_BORDER"
+	activation-group "AnliegenMenu"
+	salience 5000
+	no-loop
+	when
+		handle: R5RulesBean ( businessNumber == "0800055055" , segment == R5RulesBean.SEGMENT_SME, state != R5RulesBean.ANLIEGENMENU_DONE )
+		customerProfile: CustomerProfile ()
+		callProfile: CallProfile()
+		eval (
+				customerProfile.getSa1_ntAccount() != null &&
+				customerProfile.getSa1_ntAccount().startsWith("CARMAN")&&
+			    !R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) &&
+			    !R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			  )
+
+	then
+		menuOptions.add(administrationTransfer());
+		menuOptions.add(stoerungTransfer());
+		menuOptions.add(beratungSAL());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end
+
+ // Salience must be lower than any other rule in
+ // this activation group
+ // Rule for caller not having DSL Mobile Product
+rule "AnliegenMenu_FALLBACK_NO_DSLMOBILE_BORDER"
+	activation-group "AnliegenMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+    	customerProducts: CustomerProducts()
+    	callProfile: CallProfile()
+		eval (
+			    !customerProducts.contains("DSL_Mobile")  &&
+				(
+			      R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) ||
+			      R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			     )
+			  );
+  	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+    	menuOptions.add(beratungTransfer());
+end
+
+rule "AnliegenMenu_FALLBACK_NO_DSLMOBILE_NO_BORDER"
+	activation-group "AnliegenMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+    	customerProducts: CustomerProducts()
+    	callProfile: CallProfile()
+		eval (
+			    !customerProducts.contains("DSL_Mobile")&&
+			    !R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) &&
+			    !R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			  );
+  	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+    	menuOptions.add(beratungSAL());
+end
+ // Rule for caller having DSL Mobile Product
+rule "AnliegenMenu_FALLBACK_DSLMOBILE_BORDER"
+	activation-group "AnliegenMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+    	customerProducts: CustomerProducts()
+    	callProfile: CallProfile()
+		eval ( 
+				customerProducts.contains("DSL_Mobile")  &&
+				(
+			      R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) ||
+			      R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			     )
+			  );
+  	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+    	menuOptions.add(beratungTransfer());
+end
+
+rule "AnliegenMenu_FALLBACK_DSLMOBILE_NO_BORDER"
+	activation-group "AnliegenMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.ANLIEGENMENU_DONE )
+    	customerProducts: CustomerProducts()
+    	callProfile: CallProfile()
+		eval ( 
+				customerProducts.contains("DSL_Mobile")&&
+			    !R5RulesBean.isWithinOfficeHours(2,7,700,800,(String)callProfile.get("SysCVTdate")) &&
+			    !R5RulesBean.isWithinOfficeHours(2,7,1730,1830,(String)callProfile.get("SysCVTdate"))
+			  );
+  	then
+		menuOptions.add(administration());
+		menuOptions.add(stoerung());
+    	menuOptions.add(beratungSAL());
+end

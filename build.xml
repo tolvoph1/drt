@@ -1,0 +1,464 @@
+<!--
+     General purpose build script for web applications and web services,
+     including enhanced support for deploying directly to a Tomcat 5
+     based server.
+
+     This build script assumes that the source code of your web application
+     is organized into the following subdirectories underneath the source
+     code directory from which you execute the build script:
+
+        docs                 Static documentation files to be copied to
+                             the "docs" subdirectory of your distribution.
+
+        src                  Java source code (and associated resource files)
+                             to be compiled to the "WEB-INF/classes"
+                             subdirectory of your web applicaiton.
+
+     $Id: build.xml 213 2014-03-17 08:08:23Z tolvoph1 $
+-->
+
+
+<!-- A "project" describes a set of targets that may be requested
+     when Ant is executed.  The "default" attribute defines the
+     target which is executed if no specific target is requested,
+     and the "basedir" attribute defines the current working directory
+     from which Ant executes the requested task.  This is normally
+     set to the current working directory.
+-->
+
+<project name="bal-rules" default="dist" basedir="." >
+
+
+
+	<!-- ===================== Property Definitions =========================== -->
+	
+	<!--
+
+  Each of the following properties are used in the build script.
+  Values for these properties are set by the first place they are
+  defined, from the following list:
+
+  * Definitions on the "ant" command line (ant -Dfoo=bar compile).
+
+  * Definitions from a "build.properties" file in the top level
+    source directory of this application.
+
+  * Definitions from a "build.properties" file in the developer's
+    home directory.
+
+  * Default definitions in this build.xml file.
+
+  You will note below that property values can be composed based on the
+  contents of previously defined properties.  This is a powerful technique
+  that helps you minimize the number of changes required when your development
+  environment is modified.  Note that property composition is allowed within
+  "build.properties" files as well as in the "build.xml" script.
+
+-->
+
+	<property file="build.properties" />
+	<property file="${user.home}/build.properties" />
+
+
+	<!-- ==================== File and Directory Names ======================== -->
+
+
+	<!--
+
+  These properties generally define file and directory names (or paths) that
+  affect where the build process stores its outputs.
+
+  app.name             Base name of this application, used to
+                       construct filenames and directories.
+                       Defaults to "myapp".
+
+  app.path             Context path to which this application should be
+                       deployed (defaults to "/" plus the value of the
+                       "app.name" property).
+
+  app.version          Version number of this iteration of the application.
+
+  build.home           The directory into which the "prepare" and
+                       "compile" targets will generate their output.
+                       Defaults to "build".
+
+  catalina.home        The directory in which you have installed
+                       a binary distribution of Tomcat 5.  This will
+                       be used by the "deploy" target.
+
+  dist.home            The name of the base directory in which
+                       distribution files are created.
+                       Defaults to "dist".
+
+  manager.password     The login password of a user that is assigned the
+                       "manager" role (so that he or she can execute
+                       commands via the "/manager" web application)
+
+  manager.url          The URL of the "/manager" web application on the
+                       Tomcat installation to which we will deploy web
+                       applications and web services.
+
+  manager.username     The login username of a user that is assigned the
+                       "manager" role (so that he or she can execute
+                       commands via the "/manager" web application)
+
+-->
+
+	<property name="app.name" value="rules-constants" />
+
+	<property name="dist.home" value="${basedir}/dist" />
+
+	<property name="docs.home" value="${dist.home}/docs/api" />
+
+	<property name="build.home" value="${basedir}/build" />
+	<property name="build.classes" value="${build.home}/classes" />
+	<property name="build.utilclasses" value="${build.home}/util-classes" />
+	<property name="build.testclasses" value="${build.home}/test-classes" />
+	<property name="dist.classes" value="${dist.home}/classes"/>
+
+	<property name="src.home" value="${basedir}/src/java" />
+	<property name="src.test" value="${basedir}/src/test" />
+	<property name="libdir" value="${basedir}/lib" />
+	<property name="src.sql" value="${basedir}/sql" />
+	<property name="src.utils" value="${basedir}/src/utils" />
+	<property name="src.rules" value="${basedir}/src/rules" />
+	<property name="rules.name" value="rules" />
+	<property name="test.reports" value="${dist.home}/test-reports" />
+
+	<!-- ================== Custom Ant Task Definitions ======================= -->
+
+
+	<!--
+
+  These properties define custom tasks for the Ant build tool that interact
+  with the "/manager" web application installed with Tomcat 5.  Before they
+  can be successfully utilized, you must perform the following steps:
+
+  - Copy the file "server/lib/catalina-ant.jar" from your Tomcat 5
+    installation into the "lib" directory of your Ant installation.
+
+  - Create a "build.properties" file in your application's top-level
+    source directory (or your user login home directory) that defines
+    appropriate values for the "manager.password", "manager.url", and
+    "manager.username" properties described above.
+
+  For more information about the Manager web application, and the functionality
+  of these tasks, see <http://localhost:8080/tomcat-docs/manager-howto.html>.
+
+-->
+
+	<!--  ==================== Compilation Control Options ==================== -->
+
+	<!--
+
+  These properties control option settings on the Javac compiler when it
+  is invoked using the <javac> task.
+
+  compile.debug        Should compilation include the debug option?
+
+  compile.deprecation  Should compilation include the deprecation option?
+
+  compile.optimize     Should compilation include the optimize option?
+
+-->
+
+	<property name="compile.debug" value="true" />
+	<property name="compile.deprecation" value="false" />
+	<property name="compile.optimize" value="true" />
+
+	<!-- ==================== External Dependencies =========================== -->
+
+
+	<!--
+
+  Use property values to define the locations of external JAR files on which
+  your application will depend.  In general, these values will be used for
+  two purposes:
+  * Inclusion on the classpath that is passed to the Javac compiler
+  * Being copied into the "/WEB-INF/lib" directory during execution
+    of the "deploy" target.
+
+  Because we will automatically include all of the Java classes that Tomcat 5
+  exposes to web applications, we will not need to explicitly list any of those
+  dependencies.  You only need to worry about external dependencies for JAR
+  files that you are going to include inside your "/WEB-INF/lib" directory.
+
+-->
+
+	<!-- Dummy external dependency -->
+	<!--
+  <property name="foo.jar"
+           value="/path/to/foo.jar"/>
+-->
+
+
+	<!-- ==================== Compilation Classpath =========================== -->
+
+	<!--
+
+  Rather than relying on the CLASSPATH environment variable, Ant includes
+  features that makes it easy to dynamically construct the classpath you
+  need for each compilation.  The example below constructs the compile
+  classpath to include the servlet.jar file, as well as the other components
+  that Tomcat makes available to web applications automatically, plus anything
+  that you explicitly added.
+
+-->
+
+	<path id="compile.classpath">
+		<fileset dir="${libdir}">
+			<include name="*.jar" />
+		</fileset>
+
+		<!-- Include all JAR files that will be included in /WEB-INF/lib -->
+		<!-- *** CUSTOMIZE HERE AS REQUIRED BY YOUR APPLICATION *** -->
+		<!--
+    <pathelement location="${foo.jar}"/>
+-->
+
+		<!-- Include all elements that Tomcat exposes to applications -->
+
+	</path>
+
+	<path id="javadoc.classpath">
+		<dirset dir="${build.classes}" />
+		<path refid="compile.classpath"/>
+	</path>
+
+	<path id="testcompile.classpath">
+		<dirset dir="${build.classes}" />
+		<fileset dir="${libdir}">
+			<include name="*.jar" />
+		</fileset>
+		<path refid="compile.classpath"/>
+	</path>
+
+	<path id="testrun.classpath">
+		<dirset dir="${build.testclasses}" />
+		<dirset dir="${build.classes}" />
+		<path refid="compile.classpath"/>
+		<fileset dir="${libdir}">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+
+	<!-- ==================== All Target ====================================== -->
+
+	<!--
+
+  The "all" target is a shortcut for running the "clean" target followed
+  by the "compile" target, to force a complete recompile.
+
+-->
+
+	<target name="all" depends="clean,compile" description="Clean build and dist directories, then compile" />
+
+
+
+	<!-- ==================== Clean Target ==================================== -->
+
+	<!--
+
+  The "clean" target deletes any previous "build" and "dist" directory,
+  so that you can be ensured the application can be built from scratch.
+
+-->
+
+	<target name="clean" description="Delete old build and dist directories">
+		<delete dir="${dist.home}" />
+
+		<delete includeemptydirs="true" failonerror="false">
+					<fileset dir="${build.home}"
+						includes="**/*"/>
+				</delete>
+	</target>
+
+	<target name="cleanrules" description="Delete old rules package files">
+		<delete>
+			<fileset dir="${dist.home}">
+				<include name="${rules.name}.zip"/>
+				<include name="${rules.name}.tar"/>
+			</fileset>
+		</delete>
+	</target>
+
+
+	<!-- ==================== Compile Target ================================== -->
+
+	<!--
+
+  The "compile" target transforms source files (from your "src" directory)
+  into object files in the appropriate location in the build directory.
+  This example assumes that you will be including your classes in an
+  unpacked directory hierarchy under "/WEB-INF/classes".
+
+-->
+
+
+	<target name="compile" depends="prepare" description="Compile Java sources">
+
+		<!-- Compile Java classes as necessary -->
+		<javac srcdir="${src.home}" destdir="${build.classes}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" includeantruntime="false">
+			<classpath refid="compile.classpath" />
+		</javac>
+
+	</target>
+
+
+
+	<!-- ==================== Dist Target ===================================== -->
+
+
+	<!--
+
+  The "dist" target creates the BAL war file.
+
+-->
+
+	<target name="dist" depends="clean,compile,packagerules" description="Create binary distribution">
+		<!-- Copy additional files to ${dist.home} as necessary -->
+		<copy todir="${dist.classes}">
+			<fileset dir="${build.classes}" >
+				<filename name="**/*" />
+			</fileset>
+		</copy>
+		<!-- Create application JAR file -->
+		<jar destfile="${dist.home}/${app.name}.jar" basedir="${dist.classes}" manifest="${basedir}/Manifest-update-with-new-version.txt"/>
+	</target>
+
+	<target name="preparerules">
+		<!-- Create dist directories as needed -->
+		<mkdir dir="${dist.home}" />
+	</target>
+
+	<target name="packagerules" depends="preparerules,cleanrules" description="Package the rules files for distribution">
+		<zip destfile="${dist.home}/${rules.name}.zip" >
+			<fileset dir="${src.rules}">
+				<include name="**/*.drl"/>
+				<exclude name="**/*-MASTER-*"/>
+				<exclude name="**/swisscom/*"/>
+			</fileset>
+		</zip>
+	</target>
+
+
+	<!-- ==================== Javadoc Target ================================== -->
+
+	<!--
+
+  The "javadoc" target creates Javadoc API documentation for the Java
+  classes included in your application.  Normally, this is only required
+  when preparing a distribution release, but is available as a separate
+  target in case the developer wants to create Javadocs independently.
+
+-->
+
+	<target name="javadoc" depends="compile" description="Create Javadoc API documentation">
+
+		<javadoc sourcepath="${src.home};${src.epiphany}" destdir="${docs.home}" packagenames="*">
+			<classpath refid="javadoc.classpath" />
+		</javadoc>
+
+	</target>
+
+
+
+
+
+	<!-- ==================== Prepare Target ================================== -->
+
+	<!--
+
+  The "prepare" target is used to create the "build" destination directory,
+  and copy the static contents of your web application to it.  If you need
+  to copy static files from external dependencies, you can customize the
+  contents of this task.
+
+  Normally, this task is executed indirectly when needed.
+
+-->
+
+	<target name="prepare">
+
+		<!-- Create build directories as needed -->
+		<mkdir dir="${build.home}" />
+		<mkdir dir="${build.classes}" />
+		<mkdir dir="${build.testclasses}" />
+
+	</target>
+
+	<target name="test" depends="compiletests">
+		<mkdir dir="${test.reports}"/>
+		
+		<junit haltonfailure="false" fork="true" forkmode="once" printsummary="on">
+			<classpath refid="testrun.classpath" />
+			<formatter type="plain" />
+			<formatter type="xml" />
+			<batchtest todir="${test.reports}" >
+				<fileset dir="${build.testclasses}" >
+					<include name="**/*Test.class" />
+					<!-- rules tests don't work from ant -->
+					<exclude name="**/*RulesTransferTest.class"/>
+					<exclude name="**/RulesTransferVerificationTest.class"/>
+					<exclude name="**/RulesGetMenuOptionsVerificationTest.class"/>
+					<exclude name="**/VP2*Test.class" />
+					<exclude name="**/VP5*Test.class" />
+					<!-- unused functionality -->
+					<exclude name="**/HibernateCustomerDataDAOImplTest.class" />
+					<!-- test case not properly implemented to be run against test database -->
+					<exclude name="**/GenericDataAccessServiceImplTest.class"/>
+				</fileset>
+			</batchtest>
+		</junit>
+    </target>
+	
+    <target name="testreports" depends="compiletests">
+		<junitreport todir="${test.reports}" >
+			<fileset dir="${test.reports}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report todir="${test.reports}" format="noframes" />
+		</junitreport>
+	</target>
+
+	<!-- 
+	This target tests the rules classes.
+	It is not run automatically as part of the package target.
+	The database connection values from src/test/conf/balContext.xml are used, and so must be set to an accessable test database.
+	-->
+    <!-- There is a problem with running drools tests from ant.  This will not work.
+	<target name="testrules" depends="compiletests">
+		<mkdir dir="${test.reports}"/>
+		
+		<junit haltonfailure="false" fork="true" printsummary="on">
+			<classpath refid="testrun.classpath" />
+			<formatter type="plain" />
+			<formatter type="xml" />
+			<batchtest todir="${test.reports}">
+    			<fileset dir="${build.testclasses}" >
+					<include name="**/VP1*Test.class" />
+					<include name="**/VP2*Test.class" />
+					<include name="**/VP5*Test.class" />
+					<include name="**/RulesServiceDroolsImplTest.class"/>
+					<include name="**/*RulesTransferTest.class"/>
+					<include name="**/RulesTransferVerificationTest.class"/>
+					<include name="**/RulesGetMenuOptionsVerificationTest.class"/> 
+				</fileset> 
+			</batchtest> 
+		</junit>
+	</target>
+        -->
+
+	<target name="compiletests" depends="compile">
+		<!-- Compile Java classes as necessary -->
+		<javac srcdir="${src.test}" destdir="${build.testclasses}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}">
+			<classpath refid="testcompile.classpath" />
+		</javac>
+		<copy todir="${build.testclasses}">
+			<fileset dir="${src.test}">
+				<filename name="**/*.xml" />
+			</fileset>
+		</copy>
+	</target>
+
+</project>

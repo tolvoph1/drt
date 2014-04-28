@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../BAL/BAL.iml" filepath="$PROJECT_DIR$/../BAL/BAL.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BAL_Rules.iml" filepath="$PROJECT_DIR$/BAL_Rules.iml" />
+    </modules>
+  </component>
+</project>
+

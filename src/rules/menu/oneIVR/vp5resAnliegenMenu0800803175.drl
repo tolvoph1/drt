@@ -1,0 +1,51 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenu0800803175.drl 72 2013-09-09 14:00:21Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-09 16:00:21 +0200 (Mon, 09 Sep 2013) $
+ * $Revision: 72 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption tvTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("alm-amico");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption otherWireline() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("OTHER");
+  	  option.setPrompt("alm-weitere-sc-produkte");
+  	  option.setAction("WIRELINE");
+  	  return option;
+}
+
+/*
+   Static menu for 0800803175 BN
+   TV => Transfer
+   Other => Switch to Wireline        
+*/
+rule "Static_SelectionMenu_0800803175"
+	no-loop
+	when
+
+	then
+		menuOptions.add(tvTransfer()); 
+		menuOptions.add(otherWireline());
+end

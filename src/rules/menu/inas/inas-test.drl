@@ -1,0 +1,85 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: inas-test.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.inas;
+
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption inasNewProduct1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INASNEWPRODUCT1");
+  	  option.setPrompt("inas-new-product-1");
+  	  option.setEmergencyText("INAS-NP1");
+  	  option.setAction("TRANSFER");
+  	  option.setRoutingID("9066");
+  	  option.setReasonCode("40123");
+  	  return option;
+} 
+
+function ExtendedMenuOption inasNewProduct2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INASNEWPRODUCT2");
+  	  option.setPrompt("inas-new-product-2");
+  	  option.setEmergencyText("INAS-NP2");
+  	  option.setAction("TRANSFER");
+  	  option.setRoutingID("9067");
+  	  option.setReasonCode("40124");
+  	  return option;
+} 
+
+function ExtendedMenuOption inasNewProduct3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INASNEWPRODUCT3");
+  	  option.setPrompt("inas-new-product-3");
+  	  option.setEmergencyText("INAS-NP3");
+  	  option.setAction("TRANSFER");
+  	  option.setRoutingID("9068");
+  	  option.setReasonCode("40125");
+  	  return option;
+}
+
+function ExtendedMenuOption inasContinue() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INASCONTINUE");
+  	  option.setPrompt("inas-continue");
+  	  option.setEmergencyText("INAS-CONTINUE");
+  	  option.setAction("CONTINUE");
+  	  return option;
+}  
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+// Menu
+rule "INAS_NPMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.ANLIEGENMENU_DONE)	
+	then
+		menuOptions.add(inasNewProduct1());
+		menuOptions.add(inasNewProduct2());
+		menuOptions.add(inasNewProduct3());
+		menuOptions.add(inasContinue());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end

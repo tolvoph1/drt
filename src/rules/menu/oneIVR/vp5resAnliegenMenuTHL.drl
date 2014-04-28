@@ -1,0 +1,50 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resAnliegenMenuTHL.drl 72 2013-09-09 14:00:21Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-09 16:00:21 +0200 (Mon, 09 Sep 2013) $
+ * $Revision: 72 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.oneIVR
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption thl1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("THL1");
+  	  option.setPrompt("alm-THL-allgemein");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption thl2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("THL2");
+  	  option.setPrompt("alm-THL-ALSO");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+	Fixed menu
+*/
+rule "AnliegenMenu"
+	no-loop
+	when
+
+	then
+	  menuOptions.add(thl1());
+	  menuOptions.add(thl2());
+end
+
+ 

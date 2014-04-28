@@ -1,0 +1,249 @@
+package com.nortel.ema.swisscom.bal.rules.cbu
+
+/*
+	@(#) $Id: vp5cbu-0800724003-transfer.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+// Rules to set the selection in the menus
+rule "MenuLevel1Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel1Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel1Selected((String)callprofile.get("cbu/vp5cbu-0800724003-menu-level1"));
+end
+rule "MenuLevel2Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel2Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel2Selected((String)callprofile.get("cbu/vp5cbu-0800724003-menu-level2"));
+end
+
+rule "ID1029"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "g" ) ||
+		CallProfile ( language == "f" ) ||
+		CallProfile ( language == "i" )
+		handle: R5RulesBean( menuLevel1Selected == "SA_OUS", menuLevel2Selected == "FX" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41029");
+		transferRulesState.setQualificationResult("7314");
+end
+
+rule "ID1030"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "e" )
+		handle: R5RulesBean( menuLevel1Selected == "SA_OUS", menuLevel2Selected == "FX" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41030");
+		transferRulesState.setQualificationResult("7315");
+end
+
+rule "ID1031"
+	no-loop
+  	activation-group "QU"
+	when
+		handle: R5RulesBean( menuLevel1Selected == "SA_OUS", menuLevel2Selected == "MO" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41031");
+		transferRulesState.setQualificationResult("7561");
+end
+
+rule "ID1032"
+	no-loop
+  	activation-group "QU"
+	when
+		handle: R5RulesBean( menuLevel1Selected == "SA_OUS", menuLevel2Selected == "PAGING" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41032");
+		transferRulesState.setQualificationResult("7198");
+end
+
+rule "ID1033"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "g" ) ||
+		CallProfile ( language == "e" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "FX" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41033");
+		transferRulesState.setQualificationResult("7192");
+end
+
+rule "ID1034"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "f" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "FX" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41034");
+		transferRulesState.setQualificationResult("7193");
+end
+
+rule "ID1035"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "i" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "FX" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41035");
+		transferRulesState.setQualificationResult("7194");
+end
+
+rule "ID1036"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "g" ) ||
+		CallProfile ( language == "e" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "MO" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41036");
+		transferRulesState.setQualificationResult("7512");
+end
+
+rule "ID1037"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "f" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "MO" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41037");
+		transferRulesState.setQualificationResult("7514");
+end
+
+rule "ID1038"
+	no-loop
+  	activation-group "QU"
+	when
+		CallProfile ( language == "i" )
+		handle: R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "MO" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41038");
+		transferRulesState.setQualificationResult("7560");
+end
+
+rule "ID1045"
+	no-loop
+  	activation-group "QU"
+	when
+		handle: R5RulesBean( menuLevel1Selected == "error", menuLevel2Selected == R5RulesBean.EMPTY )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41045");
+		transferRulesState.setQualificationResult("7192");
+end
+
+rule "ID1046"
+	no-loop
+  	activation-group "QU"
+	when
+		handle: R5RulesBean( menuLevel1Selected == "SA_OUS", menuLevel2Selected == "error" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41046");
+		transferRulesState.setQualificationResult("7561");
+end
+
+rule "ID1047"
+	no-loop
+  	activation-group "QU"
+	when
+		R5RulesBean( menuLevel1Selected == "ORDER", menuLevel2Selected == "error" ) ||
+		R5RulesBean( menuLevel1Selected == R5RulesBean.EMPTY, menuLevel2Selected == "error" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41047");
+		transferRulesState.setQualificationResult("7192");
+end
+
+
+
+/*
+ 	ID 1025: CBU Portal, Fallback rule, Routing ID 7175
+*/
+rule "ID1025_FALLBACK"
+	no-loop
+	salience -1000
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41025");
+		transferRulesState.setQualificationResult("7175");
+end
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -10000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

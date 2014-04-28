@@ -1,0 +1,89 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resProduktMenuMobile.drl 118 2013-09-26 13:45:02Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-26 15:45:02 +0200 (Thu, 26 Sep 2013) $
+ * $Revision: 118 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2resProduktMenue
+
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption phoneSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName(R5RulesBean.MENUOPTION_PHONE);
+  	  option.setPrompt("pm-telefonie");
+  	  option.setEmergencyText("SA-TELEFONIE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mobileInternetSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName(R5RulesBean.MENUOPTION_MOBILE_INTERNET);
+  	  option.setPrompt("menu-mobile-internet");
+  	  option.setEmergencyText("SA-INTERNET");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tvSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("pm-tv");
+  	  option.setEmergencyText("SA-TV");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+rule "ProduktMenu_ALM_Stoerung"
+	no-loop
+	activation-group "ProduktMenu"
+	when
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+		callProfile : CallProfile( )    
+		eval ( "STOERUNG".equals(callProfile.get("oneIVRresAnliegenMenu")) )
+	then
+		menuOptions.add(mobileInternetSA());
+		menuOptions.add(phoneSA());
+		menuOptions.add(tvSA());
+		handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end
+
+ // The Fallback rules trigger when any other selection is passed on from Anliegenmenu, as other
+ // selections should transfer
+
+rule "FALLBACK_NO_PRODUKTMENU"
+	activation-group "ProduktMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( state != R5RulesBean.PRODUKTMENU_DONE )
+		callProfile : CallProfile( )     	
+  	then
+	    handle.setState ( R5RulesBean.PRODUKTMENU_DONE );
+end

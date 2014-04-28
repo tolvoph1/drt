@@ -1,0 +1,2946 @@
+package com.nortel.ema.swisscom.bal.rules.vp2smeTransfer
+
+/*
+	@(#) $Id: vp5smeTransfer.drl 221 2014-03-19 09:00:54Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.MenuSelectionBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.BusinessNumberBean;
+import org.apache.commons.lang.StringUtils;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "01_Init_R5RulesBean"
+	no-loop
+	salience 10000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+rule "01_Init_MenuSelectionBean"
+	no-loop
+	salience 20000
+	when
+		not (MenuSelectionBean())
+	then
+		assert ( new MenuSelectionBean(), true );
+end
+rule "01_Init_BusinessNumberBean"
+	no-loop
+	salience 20000
+	when
+		not (BusinessNumberBean())
+	then
+		assert ( new BusinessNumberBean(), true );
+end
+
+rule "02_MenuSelection_menuA_smePBRDSLMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smePBRDSLMenu") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("smePBRDSLMenu"));
+end
+
+rule "02_MenuSelection_menuB_smeNPAlmMenuFixnet"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuB == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeNPAlmMenuFixnet") != null )
+	then
+	  msb.setMenuB((String)callProfile.get("smeNPAlmMenuFixnet"));
+end
+
+rule "02_MenuSelection_menuC_smeNPAlmMenuMobile"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuC == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeNPAlmMenuMobile") != null )
+	then
+	  msb.setMenuC((String)callProfile.get("smeNPAlmMenuMobile"));
+end
+rule "02_MenuSelection_menuD_smeNPPrmMenuMobile"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuD == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeNPPrmMenuMobile") != null )
+	then
+	  msb.setMenuD((String)callProfile.get("smeNPPrmMenuMobile"));
+end
+rule "02_MenuSelection_menuD_smeNPPrmMenuFixnet"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuD == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeNPPrmMenuFixnet") != null )
+	then
+	  msb.setMenuD((String)callProfile.get("smeNPPrmMenuFixnet"));
+end
+rule "02_MenuSelection_menuE_smeAnliegenMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeAnliegenMenu") != null )
+	then
+	  msb.setMenuE((String)callProfile.get("smeAnliegenMenu"));
+end
+rule "02_MenuSelection_menuF_smeProduktMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuF == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeProduktMenu") != null )
+	then
+	  msb.setMenuF((String)callProfile.get("smeProduktMenu"));
+end
+rule "02_MenuSelection_menuG_smeNachtMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuG == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("smeNachtMenu") != null )
+	then
+	  msb.setMenuG((String)callProfile.get("smeNachtMenu"));
+end
+rule "03_BusinessNumber_Variant_A"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800055055" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_A);
+end
+
+rule "03_BusinessNumber_Unique"
+	no-loop
+	salience 19000
+	when
+	  cp: CallProfile ( businessnumber != null )
+	  bnb : BusinessNumberBean( businessNumber == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setBusinessNumber((String)cp.getBusinessnumber());
+end
+
+/*
+	Rules to generate Product clusters. If location of information
+	or String values change only these rules need to be changed
+*/
+rule "01_GenerateProductClusterFixnet"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( 
+				customerProducts.contains("EconomyLine") ||
+				customerProducts.contains("MultiLine ISDN") ||
+				customerProducts.contains("BusinessLine ISDN") ||
+				customerProducts.contains("BusinessLine Basisanschluss") ||
+				customerProducts.contains("BusinessLine Primäranschluss") ||
+				customerProducts.contains("Business Numbers") ||
+				customerProducts.contains("Business Connect IMS") 
+			 );
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterFixnet(true);
+end
+
+rule "02_GenerateProductClusterMobile"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.hasMatchingProduct(null,null,"+4176*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4177*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4178*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4179*",null,null,null,null,null,null,null,null) ||
+				customerProducts.contains("DSL_Mobile")
+			 );
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterMobile(true);
+end
+
+rule "03_GenerateProductClusterInternet"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.contains("FX Bluewin DSL") ||
+				customerProducts.contains("FX Bluewin Dial-Up") ||
+				customerProducts.contains("FX Bluewin nakedAccount") ||
+				customerProducts.contains("DSL-Professionell") ||
+				customerProducts.contains("BluewinTV") ||
+				customerProducts.contains("IP-Plus Business Internet")
+			)
+		handle: R5RulesBean();	
+	then
+		handle.setHasProductClusterInternet(true);		
+end
+
+rule "04_GenerateProductClusterTV"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( customerProducts.contains("BluewinTV") );
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterTV(true);
+end
+
+
+rule "05_GenerateProductClusterITHosting"
+	no-loop
+	salience 10000
+	when
+		customerProducts: CustomerProducts()
+		eval (
+				customerProducts.contains("VPN-Professionell") ||
+				customerProducts.contains("Hosted Exchange Professionell") ||
+				customerProducts.contains("Hosted Exchange Professional 2.0") ||
+				customerProducts.contains("Online Backup Professional") ||
+				customerProducts.contains("Shared Office Professional")
+			 )
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterITHosting(true);
+end
+
+rule "06_GenerateProductClusterPBX"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.contains("PBX Miete") || 
+				customerProducts.contains("PBX Kauf") ||
+				customerProducts.contains("PBX Wartungsvertrag") ||
+				customerProducts.contains("PBX Migrationsvertrag") ||
+				customerProducts.contains("BusinessConnect (IP-Centrex)")
+			)
+		handle: R5RulesBean() ;
+	then
+		handle.setHasProductClusterPBX(true);
+end
+
+rule "07_GenerateProductClusterABB"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( 
+				customerProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"SAT",null,null) ||
+				customerProducts.contains("Wireless Home Connection")
+			 )
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterABB(true);
+end
+
+rule "08_GenerateProductClusterAllIP"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( customerProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null) )
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterAllIP(true);
+end
+
+/*
+	Rule to set businessnumber in the facts bean according to Call Profile
+	Note that if the business number input value changes it needs to be changed later
+	in all rules checking for the businessnumber
+*/
+rule "BusinessNumber"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( businessNumber == R5RulesBean.EMPTY );
+	then
+		handle.setBusinessNumber(callprofile.getBusinessnumber());
+end
+
+/*
+	Rule to set the businesstyp according to the Call Profile
+*/
+rule "BusinessTyp"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( businessTyp == R5RulesBean.EMPTY );			
+	then
+		handle.setBusinessTyp(callprofile.getBusinesstyp());
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+rule "ID0071"
+	no-loop
+	salience -10
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "RECHNUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile( connectionType == R5RulesBean.WIRELINE )
+	then
+		transferRulesState.setIdentificationResult("40071");
+		transferRulesState.setQualificationResult("8801");
+end 
+
+rule "ID0075"
+	no-loop
+  	salience 50
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "RECHNUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile( connectionType == R5RulesBean.WIRELESS )
+	then
+		transferRulesState.setIdentificationResult("40075");
+		transferRulesState.setQualificationResult("8804");
+end 
+
+rule "ID0079"
+	no-loop
+	salience -150
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "RECHNUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40079");
+		transferRulesState.setQualificationResult("8806");
+end 
+
+/*
+ 	ID 225: SME 2.0 BN=0443069500 Cybernet Data Partner Admin, All Products, All Segments, All Feinsegments, Routing ID 6005
+*/
+rule "ID0225"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0443069500" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40225");
+		transferRulesState.setQualificationResult("6005");
+end
+ 
+/*
+ 	ID 236: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, SME Segment, All Feinsegments, Kundendienst Telefonie, Routing ID 8000
+ 	RelevantNumberIsFixnet
+*/
+
+rule "ID0236"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "FESTNETZ" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40236");
+		transferRulesState.setQualificationResult("8000");
+end
+
+/*
+ 	ID 238: SME 2.0 BN=0800055055 SME Zugangsnummer Open, All Products, SME/CBU/ERROR Segment, All Feinsegments , Stoerung Telefonie, Routing ID 8032
+ 	RelevantNumberIsFixnet
+*/
+rule "ID0238"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "FESTNETZ" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40238");
+		transferRulesState.setQualificationResult("8032");
+end 
+
+/*
+ 	ID 240: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, SME/CBU/ERROR Segment, All Feinsegments, Kundendienst Internet, Routing ID 8004
+*/
+rule "ID0240"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40240");
+		transferRulesState.setQualificationResult("8004");
+end
+
+rule "ID0242"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "VERMITTLUNGSANLAGE" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40242");
+		transferRulesState.setQualificationResult("8007");
+end 
+
+
+/*
+ 	ID 247: SME 2.0 BN=0800055055 SME Zugangsnummer Open, All Products, SME/CBU/ERROR Segment, All Feinsegments, Stoerung Internet, 
+ 	Routing ID 8016
+*/
+rule "ID0247"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40247");
+		transferRulesState.setQualificationResult("8016");
+end
+
+
+/*
+ 	ID 252: SME 2.0 BN=0800055055 SME Zugangsnummer, Business Internet light, SME/CBU/ERROR Segment, 
+ 	All Feinsegments, Stoerung Internet, Routing ID 8020, Added Nachtmenu
+*/
+rule "ID0252"
+	no-loop
+  	salience 93
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "INTERNET" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval (customerProducts.contains("Business Internet light"))
+	then
+		transferRulesState.setIdentificationResult("40252");
+		transferRulesState.setQualificationResult("8020");
+end
+
+/*
+ 	ID 253: SME 2.0 BN=0800055055 SME Zugangsnummer, Business Internet light, SME/CBU/ERROR Segment, 
+ 	All Feinsegments, Kundendienst Internet, Routing ID 8018
+*/
+rule "ID0253"
+	no-loop
+  	salience 97
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval (customerProducts.contains("Business Internet light"))
+	then
+		transferRulesState.setIdentificationResult("40253");
+		transferRulesState.setQualificationResult("8018");
+end
+
+/*
+ 	ID 263: SME 2.0 BN=0800055055 SME Zugangsnummer, IP Centrex, SME/CBU/ERROR Segments, All Feinsegments, Kundendienst Internet, Routing ID 8073
+*/
+rule "ID0263"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)")  ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)		
+	then
+		transferRulesState.setIdentificationResult("40263");
+		transferRulesState.setQualificationResult("8073");
+end
+
+rule "ID0270"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "MOBILE" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40270");
+		transferRulesState.setQualificationResult("8500");
+end
+
+rule "ID0275"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "MOBILE" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "MOBILE" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40275");
+		transferRulesState.setQualificationResult("8509");
+end 
+
+
+/*
+ 	ID 281: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, SME Segment, Error in Anliegenmenu, Routing ID 8000
+*/
+rule "ID0281"
+	no-loop
+	salience -1
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR)
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40281");
+		transferRulesState.setQualificationResult("8000");
+end
+
+
+/*
+ 	ID 289: SME 2.0 BN=0800055055 SME Zugangsnummer, VPN-Professional, Business Internet standard, 
+ 	SME/CBU/ERROR Segments, All Feinsegments, Stoerung Internet, Routing ID 8025, Nachtmenu added
+*/
+rule "ID0289"
+	no-loop
+  	salience 94
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "INTERNET" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval ( 	customerProducts.contains("VPN-Professionell")||
+	 			customerProducts.contains("Business Internet standard")
+	 		 ) 
+	then
+		transferRulesState.setIdentificationResult("40289");
+		transferRulesState.setQualificationResult("8025");
+end
+
+/*
+ 	ID 303: SME 2.0 BN=0800055055 SME Zugangsnummer, IP Centrex, All Segments, All Feinsegment , Kundendienst Rechnung, Routing ID 8073
+ 	RelevantNumberIsFixnet
+*/
+rule "ID0303"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "RECHNUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()	
+		CallProfile( connectionType == R5RulesBean.WIRELINE )		
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)")  ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)			
+	then
+		transferRulesState.setIdentificationResult("40303");
+		transferRulesState.setQualificationResult("8073");
+end 
+
+rule "ID0304"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "FESTNETZ" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "FESTNETZ" ) 
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()	
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)") ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)			
+	then
+		transferRulesState.setIdentificationResult("40304");
+		transferRulesState.setQualificationResult("8065");
+end 
+
+
+/*
+ 	ID 306: SME 2.0 BN=0800055055 SME Zugangsnummer, IP Centrex, SME Segment, All Feinsegments , Stoerung PBX, Routing ID 8073
+*/
+rule "ID0306"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "VERMITTLUNGSANLAGE" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()				
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)")  ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)		
+	then
+		transferRulesState.setIdentificationResult("40306");
+		transferRulesState.setQualificationResult("8073");
+end 
+
+/*
+ 	ID 313: SME 2.0 BN=0800055055 SME Zugangsnummer, Business Internet standard, VPN Professionell,
+ 			SME/CBU/ERROR Segments, All Feinsegments, Kundendienst, Routing ID 8026
+*/
+rule "ID0313"
+	no-loop
+  	salience 99
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval ( 	customerProducts.contains("VPN-Professionell")||
+	 			customerProducts.contains("Business Internet standard"))
+	then
+		transferRulesState.setIdentificationResult("40313");
+		transferRulesState.setQualificationResult("8026");
+end
+
+/*
+ 	ID 316: SME 2.0 BN=0800055055 SME Zugangsnummer, IP Centrex, SME/CBU/ERROR Segments, All Feinsegments, Stoerung Vermittlungsanlage, Routing ID 8065
+ 	Nachtmenu added
+*/
+rule "ID0316"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "VERMITTLUNGSANLAGE" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "VERMITTLUNGSANLAGE" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProducts : CustomerProducts()		
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)") ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)				
+	then
+		transferRulesState.setIdentificationResult("40316");
+		transferRulesState.setQualificationResult("8065");
+end
+
+rule "ID0360"
+	no-loop
+  	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "FESTNETZ" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProducts : CustomerProducts()	
+	 	eval ( 
+	 		customerProducts.contains("BusinessConnect (IP-Centrex)")  ||
+	 		customerProducts.contains("Business Connect IMS")
+	 	)			
+	then
+		transferRulesState.setIdentificationResult("40360");
+		transferRulesState.setQualificationResult("8073");
+end
+
+/*
+ 	ID 367: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, SME/CBU/ERROR Segments, All Feinsegments, Stoerung Vermittlungsanlage, Routing ID 4007
+ 	Nachtmenu added
+*/
+rule "ID0367"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "VERMITTLUNGSANLAGE" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "VERMITTLUNGSANLAGE" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40367");
+		transferRulesState.setQualificationResult("4007");
+end
+
+/*
+ 	ID 368: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, SME/CBU/ERROR Segments, All Feinsegments, Stoerung error, Routing ID 8802
+*/
+rule "ID0368"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.MENUOPTION_ERROR ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == R5RulesBean.MENUOPTION_ERROR ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40368");
+		transferRulesState.setQualificationResult("8802");
+end
+
+/*
+ 	ID 369: SME 2.0 BN=0800055055 SME Zugangsnummer, All Products, All Segments, All Feinsegments, Kundendienst, Routing ID 8000
+*/
+rule "ID0369"
+	no-loop
+	salience -20
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.MENUOPTION_ERROR )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40369");
+		transferRulesState.setQualificationResult("8800");
+end
+
+/*
+ 	ID 609: SME2.0 BN=0800 055 055, All Products, SME Segment, All Feinsegment, gesperrter Kunde, Routing ID 8010
+*/
+rule "ID0609"
+	no-loop
+	salience 100
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		customerProfile: CustomerProfile ( segment == R5RulesBean.SEGMENT_SME)
+		callProfile: CallProfile ()
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		eval (
+			  (
+				customerProfile.getCarsStatus() != null && 
+					( customerProfile.getCarsStatus().contains("block") ||
+				  	  customerProfile.getCarsStatus().contains("creditLimitBlock"))
+		      ) ||
+				callProfile.getCallDetailCollection().contains("mobilegesperrt")
+		     )
+	then
+		transferRulesState.setIdentificationResult("40609");
+		transferRulesState.setQualificationResult("8010");
+end
+
+rule "ID1999"
+	no-loop
+	salience 9
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41999");
+		transferRulesState.setQualificationResult("7557");
+end 
+
+rule "ID2000"
+	no-loop
+	salience 9
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42000");
+		transferRulesState.setQualificationResult("6502");
+end 
+
+rule "ID2001"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42001");
+		transferRulesState.setQualificationResult("8128");
+end 
+
+rule "ID2002"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG5" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42002");
+		transferRulesState.setQualificationResult("8129");
+end 
+
+rule "ID2003"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG6" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42003");
+		transferRulesState.setQualificationResult("8130");
+end 
+
+rule "ID2004"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_LA3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42004");
+		transferRulesState.setQualificationResult("8131");
+end 
+
+rule "ID2005"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_OL1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42005");
+		transferRulesState.setQualificationResult("8113");
+end 
+
+rule "ID2006"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_OL2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42006");
+		transferRulesState.setQualificationResult("8114");
+end 
+
+rule "ID2007"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_OL3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42007");
+		transferRulesState.setQualificationResult("8115");
+end 
+
+rule "ID2008"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42008");
+		transferRulesState.setQualificationResult("8116");
+end 
+
+rule "ID2009"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42009");
+		transferRulesState.setQualificationResult("8117");
+end 
+
+rule "ID2010"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_SG3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42010");
+		transferRulesState.setQualificationResult("8118");
+end 
+
+rule "ID2011"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_OL4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42011");
+		transferRulesState.setQualificationResult("8119");
+end 
+
+rule "ID2012"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_BZ1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42012");
+		transferRulesState.setQualificationResult("8120");
+end 
+
+rule "ID2013"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_BZ2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42013");
+		transferRulesState.setQualificationResult("8121");
+end 
+
+rule "ID2014"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_LA1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42014");
+		transferRulesState.setQualificationResult("8122");
+end 
+
+rule "ID2015"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( callDetailCollection excludes "oh_sme_global_1")
+		CustomerProfile ( sa1_ntAccount == "CARMAN_LA2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42015");
+		transferRulesState.setQualificationResult("8123");
+end 
+
+rule "ID2016"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( connectionType == R5RulesBean.WIRELESS, language != "i" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42016");
+		transferRulesState.setQualificationResult("8572");
+end 
+
+rule "ID2017"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( connectionType == R5RulesBean.WIRELESS, language == "i" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42017");
+		transferRulesState.setQualificationResult("8573");
+end
+
+rule "ID2018"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( connectionType == R5RulesBean.WIRELINE, language != "i" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42018");
+		transferRulesState.setQualificationResult("8201");
+end 
+
+rule "ID2019"
+	no-loop
+	when 
+		BusinessNumberBean ( businessNumber == "0800851851" )
+		CallProfile ( connectionType == R5RulesBean.WIRELINE, language == "i" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42019");
+		transferRulesState.setQualificationResult("8202");
+end
+
+rule "ID2020"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A ) ||
+	  BusinessNumberBean ( businessNumber == "0800851851" )
+	  CallProfile( callDetailCollection contains "srbr_port" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42020");
+		transferRulesState.setQualificationResult("8571");
+end
+
+rule "ID2021"
+	no-loop
+	salience 96
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		R5RulesBean ( hasProductClusterAllIP == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42021");
+		transferRulesState.setQualificationResult("8204");
+end
+
+rule "ID2022"
+	no-loop
+	salience 96
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "FESTNETZ" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "FESTNETZ" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		R5RulesBean ( hasProductClusterAllIP == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42022");
+		transferRulesState.setQualificationResult("8203");
+end
+
+rule "ID2023"
+	no-loop
+	salience 50
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "TV" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "TV" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		R5RulesBean ( hasProductClusterAllIP == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42023");
+		transferRulesState.setQualificationResult("8205");
+end
+
+rule "ID2024"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( callDetailCollection contains "srbr_allip_ftth" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42024");
+		transferRulesState.setQualificationResult("8206");
+end
+
+rule "ID2025"
+	no-loop
+	salience 100
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "FESTNETZ" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME )
+		R5RulesBean ( hasProductClusterAllIP == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42025");
+		transferRulesState.setQualificationResult("8206");
+end
+
+rule "ID2026"
+	no-loop
+	salience 98
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		R5RulesBean ( hasProductClusterAllIP == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42026");
+		transferRulesState.setQualificationResult("8206");
+end
+
+rule "ID2030"
+	no-loop
+	salience 101
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProducts: CustomerProducts()
+		eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		)
+	then
+		transferRulesState.setIdentificationResult("42030");
+		transferRulesState.setQualificationResult("9009");
+end
+
+rule "ID2031"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callProfile: CallProfile()
+		eval (
+			StringUtils.equals((String)callProfile.get("kmuquestion"),"yes")	
+		)
+	then
+		transferRulesState.setIdentificationResult("42031");
+		transferRulesState.setQualificationResult("8200");
+end
+
+rule "ID2032"
+	no-loop
+	salience 1000
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "ITHOSTING" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "ITHOSTING" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		CallProfile ( optionOfferName == "KMU Office W+C 4Star" )
+	then
+		transferRulesState.setIdentificationResult("42032");
+		transferRulesState.setQualificationResult("8200");
+end
+
+rule "ID2040"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( callDetailCollection contains "srbr_allip_order" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42040");
+		transferRulesState.setQualificationResult("8150");
+end
+
+rule "ID2041"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( callDetailCollection contains "srbr_allip_order_done_sa" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42041");
+		transferRulesState.setQualificationResult("8151");
+end
+
+rule "ID2702"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( callDetailCollection contains "cbr_olb" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42702");
+		transferRulesState.setQualificationResult("9565");
+end
+
+rule "ID2706"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuG == "ADMINISTRATION" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProducts : CustomerProducts()	
+	then
+		transferRulesState.setIdentificationResult("42706");
+		transferRulesState.setQualificationResult("8800");
+end 
+
+/*
+    ID 2707: SME2.0 ALM=Stoerung, DSL@Mobile Menu = 1
+*/
+rule "ID2707"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME)
+		MenuSelectionBean ( menuA == "PBRDSL1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42707");
+		transferRulesState.setQualificationResult("8016");
+end
+
+rule "ID2708"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME)
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42708");
+		transferRulesState.setQualificationResult("8802");
+end
+
+
+rule "ID2710"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_em" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42710");
+		transferRulesState.setQualificationResult("8016");
+end
+
+rule "ID2711"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_al1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42711");
+		transferRulesState.setQualificationResult("8032");
+end
+
+rule "ID2713"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_at_conv1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42713");
+		transferRulesState.setQualificationResult("8800");
+end
+
+rule "ID2714"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_at_ws2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42714");
+		transferRulesState.setQualificationResult("8508");
+end
+
+rule "ID2715"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_at_wl2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42715");
+		transferRulesState.setQualificationResult("8009");
+end
+
+rule "ID2716"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_at_da" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42716");
+		transferRulesState.setQualificationResult("8018");
+end
+
+rule "ID2717"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_cont_conv1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42717");
+		transferRulesState.setQualificationResult("8800");
+end
+
+rule "ID2718"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_cont_ws2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42718");
+		transferRulesState.setQualificationResult("8508");
+end
+
+rule "ID2719"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_cont_wl2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42719");
+		transferRulesState.setQualificationResult("8009");
+end
+
+rule "ID2720"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_cont_da" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42720");
+		transferRulesState.setQualificationResult("8018");
+end
+
+rule "ID2721"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_contmut_conv1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42721");
+		transferRulesState.setQualificationResult("8800");
+end
+
+rule "ID2722"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_contmut_ws2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42722");
+		transferRulesState.setQualificationResult("8508");
+end
+
+rule "ID2723"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_contmut_wl2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42723");
+		transferRulesState.setQualificationResult("8009");
+end
+
+rule "ID2724"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_contmut_da" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42724");
+		transferRulesState.setQualificationResult("8018");
+end
+
+rule "ID2725"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_tov_conv1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42725");
+		transferRulesState.setQualificationResult("8800");
+end
+
+rule "ID2726"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_tov_wl2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42726");
+		transferRulesState.setQualificationResult("8009");
+end
+
+rule "ID2727"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_mod_tov_da" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42727");
+		transferRulesState.setQualificationResult("8018");
+end
+
+rule "ID2728"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_cb_conv1" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42728");
+		transferRulesState.setQualificationResult("8800");
+end
+
+rule "ID2729"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_cb_ws2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42729");
+		transferRulesState.setQualificationResult("8508");
+end
+
+rule "ID2730"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_cb_wl2" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42730");
+		transferRulesState.setQualificationResult("8009");
+end
+
+rule "ID2731"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_cb_da" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42731");
+		transferRulesState.setQualificationResult("8018");
+end
+
+
+rule "ID2732"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_bil" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42732");
+		transferRulesState.setQualificationResult("8020");
+end
+
+rule "ID2733"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_bis" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42733");
+		transferRulesState.setQualificationResult("8025");
+end
+
+rule "ID2734"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_bcon" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42734");
+		transferRulesState.setQualificationResult("8065");
+end
+
+rule "ID2735"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "cbr_sa_pbx" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42735");
+		transferRulesState.setQualificationResult("4007");
+end
+
+rule "ID2737"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "ITHOSTING" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "ITHOSTING" ) 
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42737");
+		transferRulesState.setQualificationResult("8067");
+end
+
+
+/*
+ 	ID 2738: SME 2.0 BN=0800055055 SME Zugangsnummer, Hosted Exchange Prof. 2.0, Hosted Exchange Professional, 
+ 	Shared Office Professional, Online Backup Professional, SME/CBU/ERROR Segment, 
+ 	All Feinsegments, Kundendienst Internet, Routing ID 8072
+*/
+rule "ID2738"
+	no-loop
+  	salience 97
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	 	customerProducts : CustomerProducts()		
+	 	eval ( 	customerProducts.contains("Hosted Exchange Professional 2.0")||
+	 			customerProducts.contains("Hosted Exchange Professionell") ||
+	 			customerProducts.contains("Shared Office Professional") ||
+	 			customerProducts.contains("Online Backup Professional")
+	 		  )
+	then
+		transferRulesState.setIdentificationResult("42738");
+		transferRulesState.setQualificationResult("8072");
+end
+
+/*
+ 	ID 2740: SME 2.0 BN=0800055055 SME Zugangsnummer Closed, All Products, SME/CBU/ERROR Segment, All Feinsegments, Stoerung Internet, 
+ 	Routing ID 8036
+*/
+rule "ID2740"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "INTERNET" ) 
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42740");
+		transferRulesState.setQualificationResult("8036");
+end
+
+rule "ID2741"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "FESTNETZ" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42741");
+		transferRulesState.setQualificationResult("8031");
+end 
+
+rule "ID2742"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800888500" )
+		MenuSelectionBean ( menuE == "STOERUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42742");
+		transferRulesState.setQualificationResult("4018");
+end
+
+rule "ID2743"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800888500" )
+		MenuSelectionBean ( menuE == "KUNDENDIENST" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42743");
+		transferRulesState.setQualificationResult("OH_RULEID_2743");
+end
+
+rule "ID2744"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800888500" )
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42744");
+		transferRulesState.setQualificationResult("4018");
+end
+
+rule "ID2801"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42801");
+		transferRulesState.setQualificationResult("8096");
+end 
+
+rule "ID2802"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42802");
+		transferRulesState.setQualificationResult("8097");
+end 
+
+rule "ID2803"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42803");
+		transferRulesState.setQualificationResult("8098");
+end 
+
+rule "ID2804"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42804");
+		transferRulesState.setQualificationResult("8099");
+end 
+
+rule "ID2805"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42805");
+		transferRulesState.setQualificationResult("8102");
+end 
+
+rule "ID2806"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42806");
+		transferRulesState.setQualificationResult("8103");
+end 
+
+rule "ID2807"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42807");
+		transferRulesState.setQualificationResult("8104");
+end 
+
+rule "ID2808"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42808");
+		transferRulesState.setQualificationResult("8132");
+end 
+
+rule "ID2809"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42809");
+		transferRulesState.setQualificationResult("8133");
+end 
+
+rule "ID2810"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42810");
+		transferRulesState.setQualificationResult("8111");
+end 
+
+rule "ID2811"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42811");
+		transferRulesState.setQualificationResult("8112");
+end 
+
+rule "ID2812"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42812");
+		transferRulesState.setQualificationResult("8124");
+end 
+
+rule "ID2815"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42815");
+		transferRulesState.setQualificationResult("8127");
+end 
+
+rule "ID2816"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42816");
+		transferRulesState.setQualificationResult("8128");
+end 
+
+rule "ID2819"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42819");
+		transferRulesState.setQualificationResult("8131");
+end 
+
+rule "ID2820"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42820");
+		transferRulesState.setQualificationResult("8113");
+end 
+
+rule "ID2821"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42821");
+		transferRulesState.setQualificationResult("8114");
+end 
+
+rule "ID2822"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42822");
+		transferRulesState.setQualificationResult("8115");
+end 
+
+rule "ID2823"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42823");
+		transferRulesState.setQualificationResult("8116");
+end 
+
+rule "ID2824"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42824");
+		transferRulesState.setQualificationResult("8117");
+end 
+
+rule "ID2825"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42825");
+		transferRulesState.setQualificationResult("8118");
+end 
+
+rule "ID2826"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42826");
+		transferRulesState.setQualificationResult("8119");
+end 
+
+rule "ID2827"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42827");
+		transferRulesState.setQualificationResult("8120");
+end 
+
+rule "ID2828"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42828");
+		transferRulesState.setQualificationResult("8121");
+end 
+
+rule "ID2829"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42829");
+		transferRulesState.setQualificationResult("8122");
+end 
+
+rule "ID2830"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == R5RulesBean.EMPTY ) ||
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR, menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42830");
+		transferRulesState.setQualificationResult("8123");
+end 
+
+rule "ID2831"
+	no-loop
+	salience 95
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "INTERNET" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU ) ||
+		CustomerProfile ( segment == "" ) ||
+		CustomerProfile ( segment == null )
+		R5RulesBean ( hasProductClusterABB == true )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42831");
+		transferRulesState.setQualificationResult("9057");
+end
+
+rule "ID2835"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "INTERNET" ) 
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		customerProducts : CustomerProducts()
+		eval ( 
+				customerProducts.contains("IP-Plus Business Internet")
+			 );
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42835");
+		transferRulesState.setQualificationResult("8192");
+end
+
+rule "ID2836"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "STOERUNG", menuF == "TV" ) ||
+		MenuSelectionBean ( menuG == "STOERUNG", menuF == "TV" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		customerProducts : CustomerProducts()
+		eval ( customerProducts.contains("BluewinTV") );
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42836");
+		transferRulesState.setQualificationResult("8196");
+end
+
+rule "ID2838"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "ITHOSTING" ) 
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42838");
+		transferRulesState.setQualificationResult("8072");
+end
+
+rule "ID2839"
+	no-loop
+	salience 1000
+	when 
+		BusinessNumberBean ( businessNumber == "0800782788" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42839");
+		transferRulesState.setQualificationResult("8074");
+end 
+
+rule "ID2840"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "INTERNET" ) 
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_RES )
+		customerProducts : CustomerProducts()
+		eval ( 
+				customerProducts.contains("IP-Plus Business Internet")
+			 );
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42840");
+		transferRulesState.setQualificationResult("8191");
+end
+
+rule "ID2841"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuG == "BERATUNG" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == R5RulesBean.FINESEGMENT_1 ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == R5RulesBean.FINESEGMENT_2 ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == R5RulesBean.FINESEGMENT_3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42841");
+		transferRulesState.setQualificationResult("8197");
+end
+
+rule "ID2842"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuG == "BERATUNG" )
+	    CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == R5RulesBean.FINESEGMENT_4 ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == R5RulesBean.FINESEGMENT_5 ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == "" ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, fineSegment == null )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42842");
+		transferRulesState.setQualificationResult("8198");
+end  
+
+rule "ID2843"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42843");
+		transferRulesState.setQualificationResult("8128");
+end 
+
+rule "ID2846"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42846");
+		transferRulesState.setQualificationResult("8131");
+end 
+
+rule "ID2847"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42847");
+		transferRulesState.setQualificationResult("8113");
+end 
+
+rule "ID2848"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42848");
+		transferRulesState.setQualificationResult("8114");
+end 
+
+rule "ID2849"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42849");
+		transferRulesState.setQualificationResult("8115");
+end 
+
+rule "ID2850"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42850");
+		transferRulesState.setQualificationResult("8116");
+end 
+
+rule "ID2851"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42851");
+		transferRulesState.setQualificationResult("8117");
+end 
+
+rule "ID2852"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_SG3" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42852");
+		transferRulesState.setQualificationResult("8118");
+end 
+
+rule "ID2853"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_OL4" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42853");
+		transferRulesState.setQualificationResult("8119");
+end 
+
+rule "ID2854"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42854");
+		transferRulesState.setQualificationResult("8120");
+end 
+
+rule "ID2855"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_BZ2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42855");
+		transferRulesState.setQualificationResult("8121");
+end 
+
+rule "ID2856"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA1" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42856");
+		transferRulesState.setQualificationResult("8122");
+end 
+
+rule "ID2857"
+	no-loop
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME, sa1_ntAccount == "CARMAN_LA2" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42857");
+		transferRulesState.setQualificationResult("8123");
+end 
+
+rule "ID2858"
+	no-loop
+	salience -100
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuE == "BERATUNG", menuF == R5RulesBean.EMPTY )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42858");
+		transferRulesState.setQualificationResult("8803");
+end 
+
+rule "ID2860"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_infinity" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42860");
+		transferRulesState.setQualificationResult("8010");
+end
+
+rule "ID2862"
+	no-loop
+	salience 1000
+	when 
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( customerType == "NewCustomer" )
+		MenuSelectionBean ( menuE == "ADMINISTRATION", menuF == "RECHNUNG" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42862");
+		transferRulesState.setQualificationResult("8806");
+end 
+
+// New product menu rules for OneIVR SME, Wireline first, determined by menuB
+rule "ID2900"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42900");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineError");
+end
+rule "ID2901"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42901");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1");
+end
+rule "ID2902"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42902");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Prm1");
+end
+rule "ID2903"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42903");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Prm2");
+end
+rule "ID2904"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42904");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Prm3");
+end
+rule "ID2905"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42905");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Prm4");
+end
+rule "ID2906"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42906");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Prm5");
+end
+rule "ID2907"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42907");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm1Error");
+end
+rule "ID2908"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42908");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2");
+end
+rule "ID2909"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42909");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Prm1");
+end
+rule "ID2910"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42910");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Prm2");
+end
+rule "ID2911"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42911");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Prm3");
+end
+rule "ID2912"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42912");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Prm4");
+end
+rule "ID2913"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42913");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Prm5");
+end
+rule "ID2914"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42914");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm2Error");
+end
+rule "ID2915"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42915");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3");
+end
+rule "ID2916"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42916");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Prm1");
+end
+rule "ID2917"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42917");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Prm2");
+end
+rule "ID2918"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42918");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Prm3");
+end
+rule "ID2919"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42919");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Prm4");
+end
+rule "ID2920"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42920");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Prm5");
+end
+rule "ID2921"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42921");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm3Error");
+end
+rule "ID2922"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42922");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4");
+end
+rule "ID2923"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42923");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Prm1");
+end
+rule "ID2924"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42924");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Prm2");
+end
+rule "ID2925"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42925");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Prm3");
+end
+rule "ID2926"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42926");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Prm4");
+end
+rule "ID2927"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42927");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Prm5");
+end
+rule "ID2928"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuB == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42928");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLineAlm4Error");
+end
+
+// Now wireless, determined by menuC
+
+rule "ID2929"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42929");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessError");
+end
+rule "ID2930"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42930");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1");
+end
+rule "ID2931"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42931");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Prm1");
+end
+rule "ID2932"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42932");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Prm2");
+end
+rule "ID2933"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42933");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Prm3");
+end
+rule "ID2934"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42934");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Prm4");
+end
+rule "ID2935"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_NP_ALM1_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42935");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Prm5");
+end
+rule "ID2936"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM1, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42936");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm1Error");
+end
+rule "ID2937"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42937");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2");
+end
+rule "ID2938"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42938");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Prm1");
+end
+rule "ID2939"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42939");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Prm2");
+end
+rule "ID2940"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42940");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Prm3");
+end
+rule "ID2941"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42941");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Prm4");
+end
+rule "ID2942"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_NP_ALM2_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42942");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Prm5");
+end
+rule "ID2943"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM2, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42943");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm2Error");
+end
+rule "ID2944"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42944");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3");
+end
+rule "ID2945"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42945");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Prm1");
+end
+rule "ID2946"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42946");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Prm2");
+end
+rule "ID2947"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42947");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Prm3");
+end
+rule "ID2948"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42948");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Prm4");
+end
+rule "ID2949"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_NP_ALM3_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42949");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Prm5");
+end
+rule "ID2950"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM3, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42950");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm3Error");
+end
+rule "ID2951"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42951");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4");
+end
+rule "ID2952"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42952");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Prm1");
+end
+rule "ID2953"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42953");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Prm2");
+end
+rule "ID2954"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42954");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Prm3");
+end
+rule "ID2955"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42955");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Prm4");
+end
+rule "ID2956"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_NP_ALM4_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42956");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Prm5");
+end
+rule "ID2957"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_NP_ALM4, menuD == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("42957");
+		transferRulesState.setQualificationResult("OH_RULEID_SME_NPWLessAlm4Error");
+end
+
+ /*
+ 	Last Ressort, if no qualification Result could be determined
+ */
+rule "ID0256_DEFAULT_Routing_ID"
+	no-loop
+  	salience -2000
+  	when
+    	transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+  	then
+  		transferRulesState.setIdentificationResult("40256");
+    	transferRulesState.setQualificationResult("8800");
+end
+
+ /*
+ 	Default Queue for RES callers to SME portal
+ */
+rule "ID0257"
+	no-loop
+  	salience -1000
+  	when
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) 
+    	transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+  	then
+  		transferRulesState.setIdentificationResult("40257");
+    	transferRulesState.setQualificationResult("9000");
+end
+ 
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -3000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

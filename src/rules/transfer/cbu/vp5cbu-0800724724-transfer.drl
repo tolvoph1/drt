@@ -1,0 +1,472 @@
+package com.nortel.ema.swisscom.bal.rules.cbu
+
+/*
+	@(#) $Id: vp5cbu-0800724724-transfer.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProductClusters;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to set the customer segment according to the Customer Profile
+*/ 
+rule "CustomerSegment FeinSegment SubSegment"
+	no-loop
+	salience 10000
+	when
+		cpHandle: CustomerProfile ( )
+		handle: R5RulesBean( )
+	then
+		handle.setSegment(cpHandle.getSegment());
+		handle.setFineSegment(cpHandle.getFineSegment());
+		handle.setSubSegment(cpHandle.getSubSegment());
+end
+
+// Rules to set the selection in the menus
+rule "MenuLevel1Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel1Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel1Selected((String)callprofile.get("cbu/vp5cbu-0800724724-menu-level1"));
+end
+rule "MenuLevel2Selected"
+	no-loop
+	salience 10000
+	when
+		callprofile: CallProfile ( )
+		handle: R5RulesBean( menuLevel2Selected == R5RulesBean.EMPTY )			
+	then
+		handle.setMenuLevel2Selected((String)callprofile.get("cbu/vp5cbu-0800724724-menu-level2"));
+end
+
+rule "ID0951"
+	no-loop
+	salience 200
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Full Service Solution") ||
+			   customerProductClusters.contains("OneNetBase") ||
+			   customerProductClusters.contains("OneWorkPlace") ||
+			   customerProductClusters.contains("OnePhoneBusiness") 
+			  )
+	then
+		transferRulesState.setIdentificationResult("40951");
+		transferRulesState.setQualificationResult("7075");
+end
+
+rule "ID0954"
+	no-loop
+	salience 180
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("IP Plus") 
+			  )
+	then
+		transferRulesState.setIdentificationResult("40954");
+		transferRulesState.setQualificationResult("7306");
+end
+
+rule "ID0956"
+	no-loop
+	salience 160
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("eAlarm") ||
+			   customerProductClusters.contains("LL") 
+			  )
+	then
+		transferRulesState.setIdentificationResult("40956");
+		transferRulesState.setQualificationResult("7307");
+end
+
+rule "ID0959"
+	no-loop
+	salience 130
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("IPSS") ||
+			   customerProductClusters.contains("Lan-I")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40959");
+		transferRulesState.setQualificationResult("7308");
+end
+
+rule "ID0960"
+	no-loop
+	salience 150
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Avaya Nortel")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40960");
+		transferRulesState.setQualificationResult("7170");
+end
+
+rule "ID0961"
+	no-loop
+	salience 170
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Cisco Business Voip")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40961");
+		transferRulesState.setQualificationResult("7173");
+end
+
+rule "ID0962"
+	no-loop
+	salience 160
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Siemens Voice")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40962");
+		transferRulesState.setQualificationResult("7169");
+end
+
+rule "ID0964"
+	no-loop
+	salience 140
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Alcatel Voice")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40964");
+		transferRulesState.setQualificationResult("7171");
+end
+
+rule "ID0966"
+	no-loop
+	salience 120
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Astra")
+			  )
+	then
+		transferRulesState.setIdentificationResult("40966");
+		transferRulesState.setQualificationResult("7172");
+end
+
+rule "ID0967"
+	no-loop
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40967");
+		transferRulesState.setQualificationResult("7177");
+end
+
+rule "ID0968"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40968");
+		transferRulesState.setQualificationResult("7309");
+end
+
+rule "ID0969"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SF", menuLevel2Selected == "OTHER" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40969");
+		transferRulesState.setQualificationResult("7024");
+end
+
+rule "ID0977"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "MO" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40977");
+		transferRulesState.setQualificationResult("7556");
+end
+
+rule "ID1008"
+	no-loop
+	salience 190
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("MCC")
+			  )
+	then
+		transferRulesState.setIdentificationResult("41008");
+		transferRulesState.setQualificationResult("7176");
+end
+
+rule "ID1009"
+	no-loop
+	salience 200
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "VOICE" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Complex Solutions")
+			  )
+	then
+		transferRulesState.setIdentificationResult("41009");
+		transferRulesState.setQualificationResult("7174");
+end
+
+rule "ID1010"
+	no-loop
+	salience -100
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "error", menuLevel2Selected == R5RulesBean.EMPTY )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41010");
+		transferRulesState.setQualificationResult("7175");
+end
+
+rule "ID1011"
+	no-loop
+	salience -100
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "error" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41011");
+		transferRulesState.setQualificationResult("7175");
+end
+
+rule "ID1012"
+	no-loop
+	salience 220
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callProfile: CallProfile()
+		customerProducts: CustomerProducts()
+		eval ( 
+				(
+				  customerProducts.hasMatchingProduct("DSL_Mobile",null,null,null,null,null,null,null,null,null,null) ||
+				  (
+				    customerProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!SAT",null,null) && 
+				    customerProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!FTTH",null,null) 
+				  )
+				) &&	
+				"yes".equals(callProfile.get("pbrdsl_confirm"))
+			  )
+	then
+		transferRulesState.setIdentificationResult("41012");
+		transferRulesState.setQualificationResult("9014");
+end
+
+rule "ID1013"
+	no-loop
+	salience 240
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callProfile: CallProfile()
+		customerProducts: CustomerProducts()
+		eval ( 
+				(
+				customerProducts.hasMatchingProduct("VPN-Professionell",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("Business Internet standard",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("BusinessConnect (IP-Centrex)",null,null,null,null,null,null,null,null,null,null)
+				) &&
+				"yes".equals(callProfile.get("pbrdsl_confirm"))
+			  )
+	then
+		transferRulesState.setIdentificationResult("41013");
+		transferRulesState.setQualificationResult("8025");
+end
+
+rule "ID1014"
+	no-loop
+	salience 230
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callProfile: CallProfile()
+		customerProducts: CustomerProducts()
+		eval ( 
+				customerProducts.hasMatchingProduct("Business Internet light",null,null,null,null,null,null,null,null,null,null) &&
+				"yes".equals(callProfile.get("pbrdsl_confirm"))
+			  )
+	then
+		transferRulesState.setIdentificationResult("41014");
+		transferRulesState.setQualificationResult("8020");
+end
+
+rule "ID1025_FALLBACK"
+	no-loop
+	salience -1000
+  	activation-group "QU"
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41025");
+		transferRulesState.setQualificationResult("7175");
+end
+
+rule "ID1027"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SF", menuLevel2Selected == "MO" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41027");
+		transferRulesState.setQualificationResult("7557");
+end
+
+rule "ID1048"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SF", menuLevel2Selected == "error" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41048");
+		transferRulesState.setQualificationResult("7024");
+end
+
+rule "ID1050"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "CUC_International", menuLevel2Selected == R5RulesBean.EMPTY ))
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41050");
+		transferRulesState.setQualificationResult("7316");
+end
+
+rule "ID1051"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "MSS" ))
+		CallProfile( pin != "error") 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41051");
+		transferRulesState.setQualificationResult("7201");
+end
+
+rule "ID1052"
+	no-loop
+	salience 0
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "MSS" ))
+		CallProfile( pin == "error") 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("41052");
+		transferRulesState.setQualificationResult("7309");
+end
+
+rule "ID1064"
+	no-loop
+	salience 100
+  	activation-group "QU"
+	when
+		( handle: R5RulesBean( menuLevel1Selected == "SA", menuLevel2Selected == "DATA" )) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		customerProductClusters: CustomerProductClusters()
+		eval ( customerProductClusters.contains("Security") 
+			  )
+	then
+		transferRulesState.setIdentificationResult("41064");
+		transferRulesState.setQualificationResult("7317");
+end
+
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -10000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

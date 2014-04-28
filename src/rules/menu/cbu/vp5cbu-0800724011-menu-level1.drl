@@ -1,0 +1,50 @@
+/*
+ * (c)2014 Swisscom (Schweiz) AG
+ *
+ * @(#) $Id: vp5cbu-0800724011-menu-level1.drl 239 2014-04-22 13:06:28Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-04-22 15:06:28 +0200 (Tue, 22 Apr 2014) $
+ * $Revision: 239 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption menuSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SA");
+  	  option.setPrompt("alm-serviceassurance");
+  	  option.setSkill("SA");
+  	  option.setAction("SA");
+  	  option.setEmergencyText("");
+  	  return option;
+}
+
+function ExtendedMenuOption menuSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SF");
+  	  option.setPrompt("alm-servicefulfilment");
+  	  option.setSkill("SF");
+  	  option.setAction("SF");
+  	  option.setEmergencyText("");
+  	  return option;
+}
+
+
+rule "0800724011_Level1"
+	no-loop
+	when
+
+	then
+		menuOptions.add(menuSA());
+		menuOptions.add(menuSF());
+end

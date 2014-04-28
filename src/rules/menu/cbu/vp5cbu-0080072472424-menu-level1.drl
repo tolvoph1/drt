@@ -1,0 +1,58 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0080072472424-menu-level1.drl 107 2013-09-10 22:40:41Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-11 00:40:41 +0200 (Wed, 11 Sep 2013) $
+ * $Revision: 107 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption menuSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SA");
+  	  option.setPrompt("alm-serviceassurance");
+  	  option.setSkill("SA");
+  	  option.setAction("MENU");
+  	  option.setEmergencyText("SA");
+  	  return option;
+}
+
+function ExtendedMenuOption menuSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SF");
+  	  option.setPrompt("alm-servicefulfilment");
+  	  option.setSkill("SF");
+  	  option.setAction("MENU");
+  	  option.setEmergencyText("SF");
+  	  return option;
+}
+
+function ExtendedMenuOption hiddenTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("CUC_International");
+  	  option.setPosition(9);
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+rule "008007247242424_Level1"
+	no-loop
+	when
+
+	then
+		menuOptions.add(menuSA());
+		menuOptions.add(menuSF());
+		menuOptions.add(hiddenTransfer());
+end

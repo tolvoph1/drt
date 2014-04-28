@@ -1,0 +1,742 @@
+package com.nortel.ema.swisscom.bal.state.cars
+
+/*
+	@(#) $Id: wireline-callflow1-sc.drl 156 2013-12-10 08:00:59Z tolvoph1 $
+	$Author: tolvoph1 $
+	
+	Wireline Callflow 1 With Selfcare
+	
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+rule "010_212201_Init_Workflow"
+	no-loop
+	when
+		CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212201");
+		serr.setNextState("GetInvoices");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "020_GetInvoices"
+	no-loop
+	when
+		CallProfile ( nextState == "GetInvoices" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("GETINVOICES");		
+		serr.setOutputVar1("obo");
+		serr.setNextState("CheckResultGetInvoices");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030a_212202_CheckResultGetInvoices_ERROR"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckResultGetInvoices", carsActionResponse == "ERROR" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212202");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "030b_CheckResultGetInvoices_SUCCESS"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckResultGetInvoices", carsActionResponse == "SUCCESS" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:InfoNatelGesperrtSelfcareWireline");
+		serr.setOutputVar2("true");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212203");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "040_212203_AddStatistic"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212203" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212203");
+		serr.setNextState("CheckInvoiceAmount");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+rule "050a_121205_CheckInvoiceAmount_HaveOpenInvoice_true"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInvoiceAmount", openInvoiceAmount == "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212205");
+		serr.setNextState("SpeakInvoices");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "050b_212204_CheckInvoiceAmount_HaveOpenInvoice_false"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInvoiceAmount", openInvoiceAmount == "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212204");
+		serr.setNextState("SpeakAllInvoicesPaid");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "060a_SpeakInvoices"
+	no-loop
+	when
+		CallProfile ( nextState == "SpeakInvoices" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("invoices:");
+		serr.setOutputVar2("true");
+		serr.setOutputVar3("false");
+		serr.setNextState("CheckRecentPayment");   
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "060b_SpeakAllInvoicesPaid"
+	no-loop
+	when
+		CallProfile ( nextState == "SpeakAllInvoicesPaid" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:FaelligeRechnungenBeglichen");
+		serr.setOutputVar2("false");
+		serr.setOutputVar3("false");
+		serr.setNextState("FurtherQuestions"); 
+		serr.setState(StateEngineRulesResult.DONE);
+end
+ 
+rule "070a_CheckRecentPayment_HaveRecentPayment_true"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckRecentPayment", haveRecentPayment == "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("recentPayment:LetzteZahlungA,LetzteZahlungB");
+		serr.setOutputVar2("false");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212206");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "070b_CheckRecentPayment_HaveRecentPayment_false"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckRecentPayment", haveRecentPayment != "true" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:NochKeineZahlung");
+		serr.setOutputVar2("false");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212206");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "080_212206_AddStatistic"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212206" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212206");
+		serr.setNextState("SpeakPaymentPromiseInfo");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+rule "090_SpeakPaymentPromiseInfo"
+	no-loop
+	when
+		CallProfile ( nextState == "SpeakPaymentPromiseInfo" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:ZusicherungZahlungSelfcareWireline");
+		serr.setOutputVar2("true");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212301");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "100_212301_AddStatistic"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212301" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212301");
+		serr.setNextState("AskForPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+rule "110_AskForPaymentPromise"
+	no-loop
+	when
+		CallProfile ( nextState == "AskForPaymentPromise"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("INPUT");	
+		serr.setOutputVar1("AnschlussEntsperrenTaste1InfoWiederholenTaste2");
+		serr.setOutputVar2("5s");
+		serr.setOutputVar3("2");
+		serr.setNextState("CheckInputAskForPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120a_212302_CheckInputAskForPaymentPromise_Input_1"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputAskForPaymentPromise",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "1"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212302");
+		serr.setNextState("SendPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120b_212303_CheckInputAskForPaymentPromise_Input_2"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputAskForPaymentPromise",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "2"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212303");
+		serr.setNextState("SpeakPaymentPromiseInfo");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120c_212304_CheckInputAskForPaymentPromise_NoInput"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputAskForPaymentPromise",
+					  carsActionResponse == "NOINPUT" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212304");
+		serr.setNextState("RepeatAskForPaymentPromiseIntro");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120d_212304_CheckInputAskForPaymentPromise_NoMatch"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputAskForPaymentPromise",
+					  carsActionResponse == "NOMATCH" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212304");
+		serr.setNextState("RepeatAskForPaymentPromiseIntro");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "130_RepeatAskForPaymentPromiseIntro"
+	no-loop
+	when
+		CallProfile ( nextState == "RepeatAskForPaymentPromiseIntro" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:BitteOptionWaehlen");
+		serr.setOutputVar2("true");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212305");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "140_212305_AddStatistic"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212305" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212305");
+		serr.setNextState("RepeatAskForPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+rule "150_RepeatAskForPaymentPromise"
+	no-loop
+	when
+		CallProfile ( nextState == "RepeatAskForPaymentPromise"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("INPUT");	
+		serr.setOutputVar1("AnschlussEntsperrenTaste1InfoWiederholenTaste2 VerbindenMitarbeiterTaste3");
+		serr.setOutputVar2("5s");
+		serr.setOutputVar3("3");
+		serr.setNextState("CheckInputRepeatAskForPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "160a_212306_CheckInputRepeatAskForPaymentPromise_Input_1"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromise",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "1"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212306");
+		serr.setNextState("SendPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "160b_212307_CheckInputRepeatAskForPaymentPromise_Input_2"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromise",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "2"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212307");
+		serr.setNextState("SpeakPaymentPromiseInfo");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "160c_212309_CheckInputRepeatAskForPaymentPromise_Input_3"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromise",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "3"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212309");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "160d_212308_CheckInputRepeatAskForPaymentPromise_NoInput"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromise",
+					  carsActionResponse == "NOINPUT" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212308");
+		serr.setNextState("NoInputDetectedAfter212308");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "160e_212308_CheckInputRepeatAskForPaymentPromise_NoMatch"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromise",
+					  carsActionResponse == "NOMATCH" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212308");
+		serr.setNextState("NoInputDetectedAfter212308");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "170_NoInputDetectedAfter212308"
+	no-loop
+	when
+		CallProfile ( nextState == "NoInputDetectedAfter212308" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:keineEingabe");
+		serr.setOutputVar2("false");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212305AfterNINM");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "175_212305_AddStatisticAfterNINM"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212305AfterNINM" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212305");
+		serr.setNextState("RepeatAskForPaymentPromiseAfterNINM");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+rule "180_RepeatAskForPaymentPromiseAfterNINM"
+	no-loop
+	when
+		CallProfile ( nextState == "RepeatAskForPaymentPromiseAfterNINM"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("INPUT");	
+		serr.setOutputVar1("AnschlussEntsperrenTaste1InfoWiederholenTaste2 VerbindenMitarbeiterTaste3");
+		serr.setOutputVar2("5s");
+		serr.setOutputVar3("3");
+		serr.setNextState("CheckInputRepeatAskForPaymentPromiseAfterNINM");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "190a_212306_CheckInputRepeatAskForPaymentPromiseAfterNINM_Input_1"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromiseAfterNINM",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "1"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212306");
+		serr.setNextState("SendPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "190b_212307_CheckInputRepeatAskForPaymentPromiseAfterNINM_Input_2"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromiseAfterNINM",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "2"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212307");
+		serr.setNextState("SpeakPaymentPromiseInfo");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "190c_212309_CheckInputRepeatAskForPaymentPromiseAfterNINM_Input_3"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromiseAfterNINM",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "3"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212309");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "190d_212309_CheckInputRepeatAskForPaymentPromiseAfterNINM_NoInput"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromiseAfterNINM",
+					  carsActionResponse == "NOINPUT" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212309");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "190e_212309_CheckInputRepeatAskForPaymentPromiseAfterNINM_NoMatch"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputRepeatAskForPaymentPromiseAfterNINM",
+					  carsActionResponse == "NOMATCH" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212309");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+//200 Payment Promise
+rule "200_SendPaymentPromise"
+	no-loop
+	when
+		CallProfile ( nextState == "SendPaymentPromise" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PAYMENTPROMISE");		
+		serr.setOutputVar1("obo");
+		serr.setNextState("CheckResultSendPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "210a_CheckResultSendPaymentPromise_SUCCESS"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckResultSendPaymentPromise",
+					  carsActionResponse == "SUCCESS" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:DankeZusicherungZahlungSelfcareWireline");
+		serr.setOutputVar2("true");
+		serr.setOutputVar3("false");
+		serr.setNextState("AddStatistic212311");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "210b_212310_CheckResultSendPaymentPromise_ERROR"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckResultSendPaymentPromise",
+					  carsActionResponse == "ERROR" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212310");
+		serr.setNextState("SpeakErrorPaymentPromise");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "220_SpeakErrorPaymentPromise"
+	no-loop
+	when
+		CallProfile ( nextState == "SpeakErrorPaymentPromise" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");		
+		serr.setOutputVar1("portal:AuftragNichtAusgefuehrtMitarbeiterVerbinden");
+		serr.setOutputVar2("false");
+		serr.setOutputVar3("false");
+		serr.setNextState("SetPlayTransferPromptFalseThenRouting2DunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "225_SetPlayTransferPromptFalseThenRouting2DunningBlocked"
+	no-loop
+	when
+		CallProfile ( nextState == "SetPlayTransferPromptFalseThenRouting2DunningBlocked" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFERPROMPTSWITCH");		
+		serr.setOutputVar1("false");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+rule "230_212311_AddStatistic"
+	no-loop
+	when
+		CallProfile ( nextState == "AddStatistic212311" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212311");
+		serr.setNextState("FurtherQuestions");
+		serr.setState(StateEngineRulesResult.DONE);
+		
+end
+
+// Further Questions Callflow after A and B
+rule "700_FurtherQuestions"
+	no-loop
+	when
+		CallProfile ( nextState == "FurtherQuestions"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("INPUT");	
+		serr.setOutputVar1("WeitereFragenrechnungTaste1AndereFragenTaste2");
+		serr.setOutputVar2("5s");
+		serr.setOutputVar3("2");
+		serr.setNextState("CheckInputFurtherQuestions");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "710a_212312_CheckResultFurtherQuestions_Input_1"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestions",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "1"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212312");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "710b_212415_CheckResultFurtherQuestions_Input_2"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestions",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "2"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212415");
+		serr.setNextState("Back2Portal");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "710c_212313_CheckResultFurtherQuestions_NoInput"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestions",
+					  carsActionResponse == "NOINPUT" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212313");
+		serr.setNextState("RepeatFurtherQuestionsExtraPrompt");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "710d_212313_CheckResultFurtherQuestions_NoMatch"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestions",
+					  carsActionResponse == "NOMATCH" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212313");
+		serr.setNextState("RepeatFurtherQuestionsExtraPrompt");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "720_RepeatFurtherQuestionsExtraPrompt"
+	no-loop
+	when
+		CallProfile ( nextState == "RepeatFurtherQuestionsExtraPrompt"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("INPUT");	
+		serr.setOutputVar1("WeitereFragenrechnungTaste1AndereFragenTaste2 KeineWeiterenInformationenAuflegen");
+		serr.setOutputVar2("5s");
+		serr.setOutputVar3("2");
+		serr.setNextState("CheckInputFurtherQuestionsAfterNoInput");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "730a_212416_CheckResultFurtherQuestionsAfterNoInput_Input_2"
+	no-loop
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestionsAfterNoInput",
+					  carsActionResponse == "SUCCESS",
+					  carsActionResponseValue == "2"  )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212416");
+		serr.setNextState("Back2Portal");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "730b_212314_CheckResultFurtherQuestionsAfterNoInput_AnyInput"
+	no-loop
+	salience -100
+	when
+		CallProfile ( nextState == "CheckInputFurtherQuestionsAfterNoInput" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("ADDSTATISTIC");		
+		serr.setOutputVar1("212314");
+		serr.setNextState("RoutingToDunningBlocked");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "821_RoutingToDunningBlocked"
+	no-loop
+	when
+		CallProfile ( nextState == "RoutingToDunningBlocked")
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFER");		
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "830_Back2Portal"
+	no-loop
+	when
+		CallProfile ( nextState == "Back2Portal")
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("BACK2PORTAL");		
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "900_Hangup"
+	no-loop
+	when
+		CallProfile ( carsActionResponse == "HANGUP" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "998_FALLBACK_TRANSFER"
+	no-loop
+	salience -10000
+	when
+		CallProfile ( nextState != "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "999_FALLBACK_DISCONNECT"
+	no-loop
+	salience -20000
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setNextState("ThisShouldNeverHappen");
+		serr.setState(StateEngineRulesResult.DONE);
+end

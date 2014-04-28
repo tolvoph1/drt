@@ -1,0 +1,62 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeNachtMenu.drl 169 2014-01-24 14:44:16Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-01-24 15:44:16 +0100 (Fri, 24 Jan 2014) $
+ * $Revision: 169 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeAnliegenMenue
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption administrationTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ADMINISTRATION");
+  	  option.setPrompt("alm-admin");
+  	  option.setEmergencyText("SF");
+  	  option.setAction("CONFIRMTRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption stoerung() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("STOERUNG");
+  	  option.setPrompt("alm-techsupport");
+  	  option.setEmergencyText("SA");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption beratungTransfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("BERATUNG");
+  	  option.setPrompt("alm-beratung");
+  	  option.setEmergencyText("BERATUNG");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+rule "Nachtmenu_Static"
+	no-loop
+	when
+
+	then
+		menuOptions.add(administrationTransfer());
+		menuOptions.add(stoerung()); 
+		menuOptions.add(beratungTransfer());
+end
+
+
+

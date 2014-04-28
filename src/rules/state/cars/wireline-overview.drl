@@ -1,0 +1,575 @@
+package com.nortel.ema.swisscom.bal.state.cars
+
+/*
+	@(#) $Id: wireline-overview.drl 213 2014-03-17 08:08:23Z tolvoph1 $
+	$Author: tolvoph1 $
+	
+	Wireless Overview
+	
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.CARSRulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+
+import java.util.Set;
+import java.util.Date;
+
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "001_Init_CARSRulesBean"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 20000
+	when
+		not (CARSRulesBean(  ))
+	then
+		assert ( new CARSRulesBean(), true );
+end
+
+// Take the CARS attribute string from CustomerProfile.carsStatus and assign to CARS Bean
+// using the "initialize" method that splits the string and sets all values to true for
+// the keys that are in carsStatus
+rule "002_Init_carsStatus"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 10000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state != CARSRulesBean.STATUS_VALUES )
+	  customerProfile: CustomerProfile()
+	then
+	  crb.initialize(customerProfile.getCarsStatus());
+	  crb.setState(CARSRulesBean.STATUS_VALUES);
+end
+
+// Initialize all remaining attributes 
+rule "003_A_Init_aniConfirmed"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  callProfile: CallProfile();
+	then
+	  crb.setAniConfirmed(callProfile.getIdentifiedByANI());
+end
+
+rule "003_B_Init_resCustomer"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  CustomerProfile( segment == R5RulesBean.SEGMENT_RES )
+	then
+	  crb.setResCustomer("true");
+end
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+
+// The actual rules.
+// One rule per path through the overview workflow
+// Referring to Excel with Scenario IDs
+
+// Top rule that checks if Wireline Workflow is enabled in total
+
+rule "P2_ID000a_MASTER_Wireline_Inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	salience 1000
+	when
+	    CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval (
+	    	   serviceConfiguration.get("cars.wline.active") != null &&
+	    	   !serviceConfiguration.get("cars.wline.active").equals("true")
+	    	 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200100");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID000b_MASTER_Wireline_Active_EmptyCarsStatus"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	salience 1000
+	when
+	    CallProfile ( nextState == "Init" )
+	    customerProfile: CustomerProfile()
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval (
+	    	   serviceConfiguration.get("cars.wline.active") != null &&
+	    	   serviceConfiguration.get("cars.wline.active").equals("true") &&
+	    	   customerProfile.getCarsStatus() == null
+	    	 )
+	then
+		serr.setAction("GETSTATUS");
+		serr.setNextState("RunOverview");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+// The following rule handles the case when CARS Status has already been executed
+// in the wireline state rule to avoid calling the backend a second time
+rule "P2_ID000c_MASTER_Wireline_Active_HaveCarsStatus"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	salience 1000
+	when
+	    CallProfile ( nextState == "Init" )
+	    customerProfile: CustomerProfile()
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval (
+	    	   serviceConfiguration.get("cars.wline.active") != null &&
+	    	   serviceConfiguration.get("cars.wline.active").equals("true") &&
+	    	   customerProfile.getCarsStatus() != null
+	    	 )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("RunOverview");
+		serr.setState(StateEngineRulesResult.DONE);
+end     
+
+//ID001
+rule "P2_ID001_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult( state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200101|200108|200105");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID002_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		crb: CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == false )
+		CustomerProfile ( segment != "1" )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200101|200108|200104|200107");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID003_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == false, block == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200101|200109|200111");			
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID004_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == false, block == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("200101|200109|200110");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID005_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == false, dunningLetter == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200101|200108|200104|200106|200127|200141");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID006_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == false, dunningLetter == true, recentDunningLetter == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("200101|200108|200104|200106|200127|200140|200143");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID007a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == false, dunningLetter == true, recentDunningLetter == true,
+						aniConfirmed == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireline-callflow2");		
+		serr.setOutputVar2("200101|200108|200104|200106|200127|200140|200142|200148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID007b_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == false, dunningLetter == true, recentDunningLetter == true,
+						aniConfirmed == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");	
+		serr.setOutputVar2("200101|200108|200104|200106|200127|200140|200142|200148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID008_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == false, dunningLetter == true, recentDunningLetter == true,
+						aniConfirmed == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("200101|200108|200104|200106|200127|200140|200142|200149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID009_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200129");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID010_Transfer2DunningBlocked_Step1_DisableTransferPrompt"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == false )
+	then
+		serr.setAction("TRANSFERPROMPTSWITCH");		
+		serr.setOutputVar1("false");
+		serr.setNextState("Transfer2DunningBlockedAfterTransferPromptSwitch");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID010_Transfer2DunningBlocked_Step2_Transfer"
+	when
+		CallProfile ( nextState == "Transfer2DunningBlockedAfterTransferPromptSwitch" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200131");		
+		serr.addToOutputColl2("prompt","GesperrtesNatelInfo0800Wireline");
+		serr.setNextState("DONE");
+end
+
+rule "P2_ID011a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireline-callflow1-ns");		
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200132");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID011b_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");	
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200132");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID012a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == false, dunningLevelMajor == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireline-callflow1-ns");		
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200135|200136");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID012b_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == false, dunningLevelMajor == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");	
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200135|200136");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID013_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == false, dunningLevelMajor == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200135|200137");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID014a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == true, recentPaymentCheck == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireline-callflow1-ns");		
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200134|200138");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID014b_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == true, recentPaymentCheck == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");	
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200134|200138");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID015a_WF1SC_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == true, recentPaymentCheck == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1sc") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1sc").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireline-callflow1-sc");		
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200134|200139");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID015b_WF1SC_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true, dunningProcedure == true, resCustomer == true, 
+						block == true, recentBlock == true, aniConfirmed == true,
+						quickProcedure == false, dunningLevelMinor == true, recentPaymentCheck == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wline.active.callflow.1sc") != null &&
+				serviceConfiguration.get("cars.wline.active.callflow.1sc").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");	
+		serr.setOutputVar2("200101|200108|200104|200106|200126|200128|200130|200133|200134|200139");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+
+
+
+
+rule "ZZZ_FALLBACK"
+	salience -10000
+	when
+	    serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	then
+	    serr.setAction("BACK2PORTAL");
+		serr.setOutputVar3("");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end

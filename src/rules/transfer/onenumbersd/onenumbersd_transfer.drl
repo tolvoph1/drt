@@ -1,0 +1,247 @@
+package com.nortel.ema.swisscom.bal.rules.vp2resTransfer
+
+/*
+	$Id: onenumbersd_transfer.drl 235 2014-04-15 10:10:59Z tolvoph1 $
+	$Author: tolvoph1 $
+	$Rev: 235 $
+	$Date: 2014-04-15 12:10:59 +0200 (Tue, 15 Apr 2014) $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R2RulesBean;
+import java.util.Set;
+import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+
+global Set queueNames;
+
+
+
+
+/* 
+ 	ID 001: Passwords Routing ID 0000_Passwords
+*/
+rule "ID001_Passwords"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "Passwords" )
+	then
+		transferRulesState.setIdentificationResult("SD_Passwords");
+		transferRulesState.setQualificationResult("0000_Passwords");
+end
+
+
+
+/* 
+ 	ID 002: Infrastructure Routing ID 0000_Infrastructure
+*/
+rule "ID002_Infrastructure"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "Infrastructure" )
+	then
+		transferRulesState.setIdentificationResult("SD_Infrastructure");
+		transferRulesState.setQualificationResult("0000_Infrastructure");
+end
+
+/* 
+ 	ID 005: AppSysSupportMulti Routing ID 0000_AppSysSupport
+*/
+rule "ID005_AppSysSupportMulti"
+	no-loop
+  	salience 150  //Unbedingt höher als alle anderen, da sonst ein UCC sd_olten anruf auch durch regel sd_olten abgedeckt würde! Muss aber durch diese Regel abgedeckt werden
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport" )
+		eval (
+				(StringUtils.equals("multilang",(String)callprofile.get("SysOrigin"))) ||
+				(StringUtils.equals("queue1",(String)callprofile.get("SysOrigin"))) ||
+				(StringUtils.equals(StringUtils.substring((String)callprofile.get("SysOrigANI"),0,3),"058")) ||
+				(StringUtils.equals(StringUtils.substring((String)callprofile.get("SysOrigANI"),0,2),"58"))
+			  )
+	then
+		transferRulesState.setIdentificationResult("SD_0009");
+		transferRulesState.setQualificationResult("0009");
+end
+
+/* 
+ 	ID 006: AppSysSupportOpenZH Routing ID 0002
+*/
+rule "ID006_AppSysSupportOpenZH"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "zuerich" )
+	then
+		transferRulesState.setIdentificationResult("SD_0002");
+		transferRulesState.setQualificationResult("0002");
+end
+
+/* 
+ 	ID 007: AppSysSupportOpenSG Routing ID 0001
+*/
+rule "ID007_AppSysSupportOpenSG"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "stgallen" )
+	then
+		transferRulesState.setIdentificationResult("SD_0001");
+		transferRulesState.setQualificationResult("0001");
+end
+
+/* 
+ 	ID 008: AppSysSupportOpenCH Routing ID 0003
+*/
+rule "ID008_AppSysSupportOpenCH"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "chur" )
+	then
+		transferRulesState.setIdentificationResult("SD_0003");
+		transferRulesState.setQualificationResult("0003");
+end
+
+/* 
+ 	ID 009: AppSysSupportOpenOL Routing ID 0000
+*/
+rule "ID009_AppSysSupportOpenOL"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "olten" )
+	then
+		transferRulesState.setIdentificationResult("SD_0000");
+		transferRulesState.setQualificationResult("0000");
+end
+
+/* 
+ 	ID 010: AppSysSupportOpenLU Routing ID 0005
+*/
+rule "ID010_AppSysSupportOpenLU"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "luzern" )
+	then
+		transferRulesState.setIdentificationResult("SD_0005");
+		transferRulesState.setQualificationResult("0005");
+end
+
+/* 
+ 	ID 011: AppSysSupportOpenBE Routing ID 0004
+*/
+rule "ID011_AppSysSupportOpenBE"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "bern" )
+	then
+		transferRulesState.setIdentificationResult("SD_0004");
+		transferRulesState.setQualificationResult("0004");
+end
+
+
+
+
+
+/* 
+ 	ID 012: AppSysSupportOpenLA Routing ID 0006
+*/
+rule "ID012_AppSysSupportOpenLA"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "lausanne" )
+	then
+		transferRulesState.setIdentificationResult("SD_0006");
+		transferRulesState.setQualificationResult("0006");
+end
+
+/* 
+ 	ID 013: AppSysSupportOpenSI Routing ID 0007
+*/
+rule "ID013_AppSysSupportOpenSI"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "sion" )
+	then
+		transferRulesState.setIdentificationResult("SD_0007");
+		transferRulesState.setQualificationResult("0007");
+end
+
+/* 
+ 	ID 014: AppSysSupportOpenBZ Routing ID 0008
+*/
+rule "ID014_AppSysSupportOpenBZ"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "AppSysSupport", sysOrigin == "bellinzona" )
+	then
+		transferRulesState.setIdentificationResult("SD_0008");
+		transferRulesState.setQualificationResult("0008");
+end
+
+
+
+/* 
+ 	ID 015: Windows7 Routing ID 0016
+*/
+rule "ID015_Windows7"
+	no-loop
+  	salience 100
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+		callprofile: CallProfile ( menuwahl == "Windows7" )
+	then
+		transferRulesState.setIdentificationResult("SD_0016");
+		transferRulesState.setQualificationResult("0016");
+end
+
+
+/* 
+ 	ID 999: DefaultTransfer
+*/
+rule "ID999_DefaultTransfer"
+	no-loop
+  	salience -2000
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("SD_DefaultTrf");
+		transferRulesState.setQualificationResult("0009");
+end
+
+
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -1000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

@@ -1,0 +1,58 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: iphone5-res.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.menu.inas;
+
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption iphoneOption1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPIPHONE-2-1");
+  	  option.setPrompt("iPhone-02-1");
+  	  option.setAction("SENDSMS");
+  	  return option;
+} 
+
+function ExtendedMenuOption iphoneOption2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPIPHONE-2-2");
+  	  option.setPrompt("iPhone-02-2");
+  	  option.setAction("TRANSFER");
+  	  option.setRoutingID("8567");
+  	  option.setReasonCode("3530");
+  	  return option;
+} 
+ 
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+// Menu
+rule "iPhoneMenu"
+	no-loop
+	when
+		handle: R5RulesBean ( state != R5RulesBean.ANLIEGENMENU_DONE)	
+	then
+		menuOptions.add(iphoneOption1());
+		menuOptions.add(iphoneOption2());
+		handle.setState ( R5RulesBean.ANLIEGENMENU_DONE );
+end

@@ -1,0 +1,116 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resNPAlmMenuFixnet.drl 72 2013-09-09 14:00:21Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-09 16:00:21 +0200 (Mon, 09 Sep 2013) $
+ * $Revision: 72 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R2RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption npAlmOther() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPOTHERALM");
+  	  option.setPrompt("npalm-other");
+  	  option.setAction("CONTINUE");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Menu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1");
+  	  option.setPrompt("npalm-Iphone_Ipad");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Transfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1TRANSFER");
+  	  option.setPrompt("npalm-vivo-tutto");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Menu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2");
+  	  option.setPrompt("npalm-IPad");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Transfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2TRANSFER");
+  	  option.setPrompt("npalm-vivo_casa");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Menu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3");
+  	  option.setPrompt("npalm-Combox");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Transfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3TRANSFER");
+  	  option.setPrompt("npalm-Combox");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Menu() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4");
+  	  option.setPrompt("npalm-example4");
+  	  option.setAction("MENU");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Transfer() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4TRANSFER");
+  	  option.setPrompt("npalm-example4");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+ 
+/*
+   Static new product menu for RES Fixnet callers
+   This menu uses the same menu options as the menu for mobile
+   
+   Switch off individual menu options by just commenting them out
+        
+*/
+
+rule "Static_NewProductMenu_Fixnet"
+	no-loop
+	when
+
+	then
+//		menuOptions.add(npAlm1Menu());
+//		menuOptions.add(npAlm1Transfer());
+//		menuOptions.add(npAlm2Menu());
+//		menuOptions.add(npAlm2Transfer());
+//		menuOptions.add(npAlm3Menu());
+//		menuOptions.add(npAlm3Transfer());
+//		menuOptions.add(npAlm4Menu());
+//		menuOptions.add(npAlm4Transfer());
+		menuOptions.add(npAlmOther());
+end

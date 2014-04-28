@@ -1,0 +1,47 @@
+package com.nortel.ema.swisscom.bal.rules.vp5resTransfer
+
+/*
+	@(#) $Id: shophotline_transfer.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.BusinessNumberBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.MenuSelectionBean;
+import java.util.Set;
+import java.util.Date;
+
+global Set queueNames;
+
+
+/* ****************************************************************************************
+   Start of the rules
+   *************************************************************************************** */
+
+rule "default transfer SHL"
+	no-loop
+	when
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("");
+		transferRulesState.setQualificationResult("6503");
+end
+
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -1000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

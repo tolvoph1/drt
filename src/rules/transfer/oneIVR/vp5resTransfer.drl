@@ -1,0 +1,3786 @@
+package com.nortel.ema.swisscom.bal.rules.vp5resTransfer
+
+/*
+	@(#) $Id: vp5resTransfer.drl 233 2014-04-08 06:19:14Z tolvoph1 $
+	$Author: tolvoph1 $
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.TransferRulesState;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.BusinessNumberBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.MenuSelectionBean;
+import java.util.Set;
+import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+
+global Set queueNames;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+
+rule "01_Init_R5RulesBean"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+rule "01_Init_BusinessNumberBean"
+	no-loop
+	salience 20000
+	when
+		not (BusinessNumberBean())
+	then
+		assert ( new BusinessNumberBean(), true );
+end
+rule "01_Init_MenuSelectionBean"
+	no-loop
+	salience 20000
+	when
+		not (MenuSelectionBean())
+	then
+		assert ( new MenuSelectionBean(), true );
+end
+
+/*
+	Rules to populate the beans used for easier reading, writing and changing of the rules
+*/
+rule "02_BusinessNumber_Unique"
+	no-loop
+	salience 19000
+	when
+	  cp: CallProfile ( businessnumber != null )
+	  bnb : BusinessNumberBean( businessNumber == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setBusinessNumber((String)cp.getBusinessnumber());
+end
+/*
+	BusinessNumberBean Variant A includes the following business numbers:
+	- 00800 88 11 12 13
+	- 0800 88 11 12
+	- 0800 800 800
+	- 0800 814 814
+	- 0800 55 64 64
+	- 00800 55 64 64 64
+	- 062 207 60 90
+	- 062 286 12 12
+	- 062 207 60 59
+	- 081 287 90 46
+	- 0800 854 854
+	- 0800 803 175 (added to support option 2 in HST 1st level menu getting into normal wireline dialog)
+*/
+rule "02_BusinessNumber_Variant_A"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0080088111213" ) ||
+	  CallProfile ( businessnumber == "0800881112" ) ||
+	  CallProfile ( businessnumber == "0800800800" ) ||
+	  CallProfile ( businessnumber == "0800814814" ) ||
+	  CallProfile ( businessnumber == "0800556464" ) ||
+	  CallProfile ( businessnumber == "0080055646464" ) ||
+	  CallProfile ( businessnumber == "0622076090" ) ||
+	  CallProfile ( businessnumber == "0622861212" ) ||
+	  CallProfile ( businessnumber == "0622076059" ) ||
+	  CallProfile ( businessnumber == "0812879046" ) ||
+	  CallProfile ( businessnumber == "0800854854" ) ||
+	  CallProfile ( businessnumber == "0800803175" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_A);
+end
+
+/*
+	BusinessNumberBean Variant B includes the following business numbers:
+	- 0800 15 17 28
+	- 081 287 99 52
+*/
+rule "02_BusinessNumber_Variant_B"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800151728" ) ||
+	  CallProfile ( businessnumber == "0812879952" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_B);
+end
+
+/*
+	BusinessNumberBean Variant C includes the following business numbers:
+	- 0800 65 60 00
+	- 062 207 65 60
+*/
+rule "02_BusinessNumber_Variant_C_Repair_Hotline"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800656000" ) ||
+	  CallProfile ( businessnumber == "0622076560" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_C);
+end
+
+/*
+	BusinessNumberBean Variant D includes the following business numbers:
+	- 0800 566 566
+*/
+rule "02_BusinessNumber_Variant_D_M-Partner"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800566566" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_D);
+end
+
+/*
+	BusinessNumberBean Variant F includes the following business numbers:
+	- 0800 85 00 85
+*/
+rule "02_BusinessNumber_Variant_E_TraderHotline"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800850085" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_F);
+end
+
+/*
+	BusinessNumberBean Variant G includes the following business numbers:
+	- 0800 40 60 80
+*/
+rule "02_BusinessNumber_Variant_G_TASHotline"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800406080" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_G);
+end
+
+/*
+	BusinessNumberBean Variant H includes the following business numbers:
+	- 0800 888 817
+*/
+rule "02_BusinessNumber_Variant_H_ULLRebilling"
+	no-loop
+	salience 19000
+	when
+	  CallProfile ( businessnumber == "0800888817" )
+	  bnb : BusinessNumberBean( variant == BusinessNumberBean.EMPTY )
+	then
+	  bnb.setVariant(BusinessNumberBean.VARIANT_H);
+end
+
+/*
+	MenuSelectionBean, populate the bean attributes in the following manner:
+	- New Product Anliegen Menu Level 1: oneIVR/vp5resNPAlmMenu
+	  goes to menuSelectionBean.menuA
+	- New Product Anliegen Menu Level 2: oneIVR/vp5resNPPrmMenu
+	  goes to menuSelectionBean.menuB
+	- Anliegenmenu: oneIVR/vp5resAnliegenMenu
+	  goes to menuSelectionBean.menuC
+*/
+rule "03a1_MenuSelection_menuA_oneIVRresNPAlmMenu_Fixnet"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresNPAlmMenuFixnet") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("oneIVRresNPAlmMenuFixnet"));
+end
+rule "03a2_MenuSelection_menuA_oneIVRresNPAlmMenu_Mobile"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresNPAlmMenuMobile") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("oneIVRresNPAlmMenuMobile"));
+end
+rule "03a3_MenuSelection_menuA_oneIVRresNPAlmMenu_Ausland"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresNPAlmMenuAusland") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("oneIVRresNPAlmMenuAusland"));
+end
+rule "03b_MenuSelection_menuB_oneIVRresNPPrmMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuB == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresNPPrmMenu") != null )
+	then
+	  msb.setMenuB((String)callProfile.get("oneIVRresNPPrmMenu"));
+end
+rule "03c_MenuSelection_menuC_oneIVRresAnliegenMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuC == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresAnliegenMenu") != null )
+	then
+	  msb.setMenuC((String)callProfile.get("oneIVRresAnliegenMenu"));
+end
+rule "03d_MenuSelection_menuD_oneIVRresProduktMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuD == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresProduktMenu") != null )
+	then
+	  msb.setMenuD((String)callProfile.get("oneIVRresProduktMenu"));
+end
+rule "03e1_MenuSelection_menuE_oneIVRresMigrosMenuLevel1"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresMigrosMenuLevel1") != null )
+	then
+	  msb.setMenuE((String)callProfile.get("oneIVRresMigrosMenuLevel1"));
+end
+
+rule "03e2_MenuSelection_menuE_oneIVRresTHLMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresTHLMenu") != null )
+	then
+	  msb.setMenuE((String)callProfile.get("oneIVRresTHLMenu"));
+end
+rule "03e3_MenuSelection_menuE_oneIVRresTASMenu"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresTASMenu") != null )
+	then
+	  msb.setMenuE((String)callProfile.get("oneIVRresTASMenu"));
+end
+rule "03e4_MenuSelection_menuE_oneIVRresAnliegenMenuOnlineShop"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresAnliegenMenuOnlineShop") != null )
+	then
+	  msb.setMenuE((String)callProfile.get("oneIVRresAnliegenMenuOnlineShop"));
+end
+rule "03f_MenuSelection_menuF_oneIVRresMigrosMenuLevel2"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuF == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresMigrosMenuLevel2") != null )
+	then
+	  msb.setMenuF((String)callProfile.get("oneIVRresMigrosMenuLevel2"));
+end
+rule "03f_MenuSelection_menuF_oneIVRresTASMenuLevel2"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresTASMenuLevel2") != null )
+	then
+	  msb.setMenuF((String)callProfile.get("oneIVRresTASMenuLevel2"));
+end
+rule "03g_MenuSelection_menuG_oneIVRresTASMenuLevel3"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuE == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("oneIVRresTASMenuLevel3") != null )
+	then
+	  msb.setMenuG((String)callProfile.get("oneIVRresTASMenuLevel3"));
+end
+rule "04a_GenerateProductClusterTV"
+	no-loop
+	salience 10000
+	when
+		custProducts : CustomerProducts( ) 
+		eval ( 
+			custProducts.contains("BluewinTV") ||
+			custProducts.contains("ALL:Trio Bundle") 
+		)
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterTV(true);
+end
+rule "04b_GenerateProductClusterAllIP"
+	no-loop
+	salience 10000
+	when
+		custProducts : CustomerProducts( ) 
+		eval ( custProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null) )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterAllIP(true);
+end
+rule "04c_GenerateProductClusterFTTH"
+	no-loop
+	salience 10000
+	when
+		custProducts : CustomerProducts( ) 
+		eval ( custProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"FTTH",null,null)  )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterFTTH(true);
+end
+rule "04d_GenerateProductClusterABB"
+	no-loop
+	salience 10000
+	when
+		custProducts : CustomerProducts( ) 
+		eval ( 
+				custProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"SAT",null,null) ||
+				custProducts.contains("Wireless Home Connection")
+			 )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterABB(true);
+end
+rule "04e1_GenerateProductClusterInternet"
+	no-loop
+	salience 10000
+	when
+		custProducts : CustomerProducts( ) 
+		eval ( 
+			( 
+			  custProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!SAT",null,null) &&
+			  custProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!FTTH",null,null)
+			) ||
+			  custProducts.hasMatchingProduct("Bluewin Phone",null,null,null,null,null,null,null,null,null,null) ||
+			  custProducts.hasMatchingProduct("FX Bluewin Dial-Up",null,null,null,null,null,null,null,null,null,null) ||
+			  custProducts.hasMatchingProduct("FX Bluewin nakedAccount",null,null,null,null,null,null,null,null,null,null) ||
+			  custProducts.hasMatchingProduct("DSL_Mobile",null,null,null,null,null,null,null,null,null,null)
+		 )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterInternet(true);
+end
+rule "04e2_GenerateProductClusterInternet"
+	no-loop
+	salience 10000
+	when
+		r5b: R5RulesBean( hasProductClusterAllIP == true )
+	then
+		r5b.setHasProductClusterInternet(true);
+end
+rule "04f_GenerateProductClusterDialup"
+	no-loop
+	salience 10000
+	when
+	    custProducts : CustomerProducts()
+	    eval ( custProducts.contains("FX Bluewin Dial-Up") )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterDialup(true);
+end
+rule "04g_GenerateProductClusterDuplo"
+	no-loop
+	salience 10000
+	when
+	    custProducts : CustomerProducts( ) 
+		eval ( custProducts.contains("DSL_Mobile") )
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterDuplo(true);
+end
+rule "04h_GenerateProductClusterVoIP"
+	no-loop
+	salience 10000
+	when
+	    custProducts : CustomerProducts( ) 
+		eval (
+				( 
+					custProducts.contains("VoIP 1st Line") || 
+					custProducts.contains("VoIP 1st Line|VoIP Number") || 
+					custProducts.contains("VoIP FX") ||
+					custProducts.contains("VoIP FX|VoIP FX Number")
+				)
+			)
+		r5b: R5RulesBean()
+	then
+		r5b.setHasProductClusterVoIP(true);
+end
+
+rule "05_PopulateAgeDetails"
+	no-loop
+	salience 10000
+	when
+	  customerProfile: CustomerProfile ( )
+	  serviceconfig: ServiceConfigurationMap()
+	  eval (
+			!StringUtils.isEmpty(customerProfile.getAge()) &&
+			!StringUtils.isEmpty((String)serviceconfig.get("vp.res.caller.MaxAge")) &&
+			!StringUtils.isEmpty((String)serviceconfig.get("vp.res.caller.BestAgeStart"))
+		)
+		r5b: R5RulesBean()
+	then
+		r5b.setCustomerAge(customerProfile.getAge());
+		r5b.setMaxAge((String)serviceconfig.get("vp.res.caller.MaxAge"));
+		r5b.setBestAge((String)serviceconfig.get("vp.res.caller.BestAgeStart"));
+end
+
+rule "07_PopulateYoungsterBestage"
+	no-loop
+	salience 10000
+	when
+		customerProfile: CustomerProfile ( )
+		serviceconfig: ServiceConfigurationMap()
+		r5b: R5RulesBean()
+		eval (
+			  !StringUtils.isEmpty(customerProfile.getAge()) &&
+			  !StringUtils.isEmpty((String)serviceconfig.get("vp.res.YoungsterBestAge.maxAge"))
+			 )
+	then
+		r5b.setYoungsterBestAge(new Integer(customerProfile.getAge()).compareTo(new Integer((String)serviceconfig.get("vp.res.YoungsterBestAge.maxAge")))<0);
+end
+			  
+
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+rule "ID0006"
+	no-loop
+	salience 15
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELINE, international != "true", callDetailCollection contains "oh_pers_res_premium_vip_tag" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40006");
+      transferRulesState.setQualificationResult("9116");
+end
+
+rule "ID0007"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40007");
+      transferRulesState.setQualificationResult("9115");
+end
+
+rule "ID0009"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 	
+	then
+		transferRulesState.setIdentificationResult("40009");
+		transferRulesState.setQualificationResult("9115");
+end
+
+rule "ID0012"
+	no-loop
+  	salience 96
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterInternet == true, hasProductClusterFTTH == false, hasProductClusterABB == false )
+	then
+		transferRulesState.setIdentificationResult("40012");
+		transferRulesState.setQualificationResult("9014");
+end
+
+rule "ID0013"
+	no-loop
+	salience -700
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( callDetailCollection contains "oh_pers_res_premium_platin_tag" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_ERROR )
+	then
+	  transferRulesState.setIdentificationResult("40013");
+      transferRulesState.setQualificationResult("9115");
+end
+
+rule "ID0014"
+	no-loop
+  	salience 93
+	when 
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET )
+ 	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterABB == true )
+	then
+		transferRulesState.setIdentificationResult("40014");
+		transferRulesState.setQualificationResult("9057");
+end 
+
+rule "ID0020"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment != R5RulesBean.SUBSEGMENT_VIP )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40020");
+		transferRulesState.setQualificationResult("9015");
+end 
+
+rule "ID0021"
+	no-loop
+	salience 1
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_GOLD )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40021");
+		transferRulesState.setQualificationResult("9110");
+end 
+
+rule "ID0024"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( international != "true", callDetailCollection contains "oh_pers_res_premium_vip_nacht" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40024");
+      transferRulesState.setQualificationResult("9116");
+end
+
+rule "ID0026"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( international != "true", callDetailCollection contains "oh_pers_res_premium_platin_nacht" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40026");
+      transferRulesState.setQualificationResult("9116");
+end
+
+rule "ID0029"
+	no-loop
+	salience -1499
+	when
+		BusinessNumberBean ( businessNumber == "0800803175" )
+		CustomerProfile ( segment != R5RulesBean.SEGMENT_SME )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40029");
+		transferRulesState.setQualificationResult("9084");
+end
+
+rule "ID0046"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 	
+	then
+		transferRulesState.setIdentificationResult("40046");
+		transferRulesState.setQualificationResult("9115");
+end
+
+rule "ID0072"
+	no-loop
+	salience 90
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )	  
+	  MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY, menuC == MenuSelectionBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40072");
+      transferRulesState.setQualificationResult("9502");
+end
+
+rule "ID0073"
+	no-loop
+	salience 90
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile(  connectionType == R5RulesBean.WIRELESS, 
+	  				international != "true",
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )	  
+	  MenuSelectionBean ( menuA == R5RulesBean.EMPTY, menuC == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("40073");
+      transferRulesState.setQualificationResult("9502");
+end
+
+rule "ID0088"
+	no-loop
+  	salience 95
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELINE, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerInBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("40088");
+		transferRulesState.setQualificationResult("9164");
+end
+
+rule "ID0089"
+	no-loop
+  	salience 95
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELINE, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerInBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("40089");
+		transferRulesState.setQualificationResult("9160");
+end
+
+rule "ID0094"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800800832" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40094");
+		transferRulesState.setQualificationResult("9032");
+end
+
+rule "ID0095"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800800975" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40095");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID0105"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800820212" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40105");
+		transferRulesState.setQualificationResult("9027");
+end
+
+rule "ID0125"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0848800175" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40125");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID0126"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0848800811" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40126");
+		transferRulesState.setQualificationResult("9000");
+end
+
+/* 
+ 	Last Ressort, if no qualification Result could be determined
+*/
+rule "ID0136 DEFAULT Routing ID"
+	no-loop
+  	salience -2000
+  	when
+  	    transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+  	then
+  		transferRulesState.setIdentificationResult("40136");
+    	transferRulesState.setQualificationResult("9000");
+end
+
+rule "ID0141"
+	no-loop
+	salience 1
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_GOLD )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40141");
+		transferRulesState.setQualificationResult("9001");
+end
+
+rule "ID0155"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100")
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  (
+	  	R5RulesBean ( hasProductClusterFTTH == true ) ||
+	  	R5RulesBean ( hasProductClusterAllIP == true )
+	  )
+	then
+		transferRulesState.setIdentificationResult("40155");
+		transferRulesState.setQualificationResult("9168");
+end
+
+rule "ID0162"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )	  
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )	
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerOverMaxAge == true )
+	then
+		transferRulesState.setIdentificationResult("40162");
+		transferRulesState.setQualificationResult("9160");
+end
+
+rule "ID0175"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "oh_res_global_100", 
+	  			   callDetailCollection contains "srbr_before_move" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40175");
+		transferRulesState.setQualificationResult("9205");
+end
+
+rule "ID0250"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "cbr_abu" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40250");
+		transferRulesState.setQualificationResult("9153");
+end
+
+rule "ID0320"
+	no-loop
+	salience 110
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterFTTH == true ) 
+	then
+		transferRulesState.setIdentificationResult("40320");
+		transferRulesState.setQualificationResult("9139");
+end 
+
+rule "ID0324"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("40324");
+		transferRulesState.setQualificationResult("9138");
+end
+
+rule "ID0327"
+	no-loop
+	salience 97
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  customerProducts: CustomerProducts() 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  eval (
+		      customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,"BX")	
+		 	)
+	then
+		transferRulesState.setIdentificationResult("40327");
+		transferRulesState.setQualificationResult("9092");
+end
+
+rule "ID0330"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "oh_res_global_100", callDetailCollection contains "srbr_ftth_sf" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40330");
+		transferRulesState.setQualificationResult("9167");
+end
+
+rule "ID0388"
+	no-loop
+	salience -1000
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40388");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID0446"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_200" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40446");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID0451"
+	no-loop
+	salience 101
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterAllIP == true )
+	then
+		transferRulesState.setIdentificationResult("40451");
+		transferRulesState.setQualificationResult("9146");
+end 
+
+rule "ID0460"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international != "true", 
+	  			   callDetailCollection contains "oh_res_global_100", callDetailCollection contains "cbr_allip" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("40460");
+		transferRulesState.setQualificationResult("9167");
+end
+
+rule "ID0603"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  customerProducts: CustomerProducts() 
+	  R5RulesBean ( hasProductClusterVoIP == true )
+	  eval (
+		      customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,"BX")
+		   )
+	then
+		transferRulesState.setIdentificationResult("40603");
+		transferRulesState.setQualificationResult("9169");
+end 
+
+rule "ID3001"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43001");
+      transferRulesState.setQualificationResult("9168");
+end
+
+rule "ID3002"
+	no-loop
+	salience 97
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43002");
+		transferRulesState.setQualificationResult("9000");
+end 
+
+rule "ID3003"
+	no-loop
+	salience 110
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43003");
+		transferRulesState.setQualificationResult("9139");
+end 
+
+rule "ID3004"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PASSWORD )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43004");
+		transferRulesState.setQualificationResult("9139");
+end 
+
+rule "ID3005"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43005");
+		transferRulesState.setQualificationResult("9141");
+end 
+
+rule "ID3006"
+	no-loop
+  	salience 95
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerInBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43006");
+		transferRulesState.setQualificationResult("9161");
+end
+
+rule "ID3007"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( youngsterBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43007");
+		transferRulesState.setQualificationResult("9183");
+end
+
+rule "ID3011"
+	no-loop
+	salience -101
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_MOBILE_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43011");
+		transferRulesState.setQualificationResult("9561");
+end 
+
+rule "ID3012"
+	no-loop
+	salience -101
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43012");
+		transferRulesState.setQualificationResult("9014");
+end 
+
+rule "ID3013"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_order_onp" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43013");
+		transferRulesState.setQualificationResult("0513");
+end
+
+rule "ID3014"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "oh_res_global_100", 
+	  			   callDetailCollection contains "srbr_after_move" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43014");
+		transferRulesState.setQualificationResult("9200");
+end
+
+rule "ID3015"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_fio_bern" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43015");
+		transferRulesState.setQualificationResult("9599");
+end
+
+rule "ID3016"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_fio_zuerich" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43016");
+		transferRulesState.setQualificationResult("9598");
+end
+
+rule "ID3017"
+	no-loop
+	salience 100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_fio_lausanne" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43017");
+		transferRulesState.setQualificationResult("9597");
+end
+
+rule "ID3019"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "TV", menuF == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43019");
+		transferRulesState.setQualificationResult("9010");
+end
+
+rule "ID3020"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800010742" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43020");
+		transferRulesState.setQualificationResult("9130");
+end
+
+rule "ID3021"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "TV", menuF == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43021");
+		transferRulesState.setQualificationResult("9010");
+end
+
+rule "ID3022"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0553" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43022");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3023"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0554" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43023");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3024"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0555" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43024");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3025"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0556" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43025");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3026"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0557" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43026");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3027"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0558" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43027");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3028"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0559" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43028");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3029"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0560" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43029");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3030"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0561" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43030");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3031"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0562" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43031");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3031_Error_Default"
+	no-loop
+	salience -1
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43031");
+		transferRulesState.setQualificationResult("0562");
+end
+
+
+rule "ID3032"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0563" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43032");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3033"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0564" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43033");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3034"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0565" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43034");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3035"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0566" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43035");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3036"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0572" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43036");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3037"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0573" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43037");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3038"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0574" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43038");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3039"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0575" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43039");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3040"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0576" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43040");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3041"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0577" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43041");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3042"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817112" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0578" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43042");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3043"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0549" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43043");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3044"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0550" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43044");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3044_Error_Default"
+	no-loop
+	salience -1
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43044");
+		transferRulesState.setQualificationResult("0550");
+end
+
+rule "ID3045"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0551" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43045");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3046"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0552" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43046");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3047"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0545" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43047");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3048"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0546" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43048");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3049"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0547" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43049");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3050"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0548" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43050");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3051"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0541" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43051");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3052"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0542" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43052");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3053"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0543" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43053");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3054"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800817175" )
+		callProfile: CallProfile ( callDetailCollection contains "cfstransfer", routingID == "0544" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43054");
+		transferRulesState.setQualificationResult(callProfile.getRoutingID());
+end
+
+rule "ID3055"
+	no-loop
+	salience 502
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  ( 
+		CallProfile( callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_CCC ) ||  
+	    CallProfile( callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_DUNNING_BLOCKED ) ||
+	    CallProfile( callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS ) ||
+	    CallProfile( callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_BARRING_PREVENTION ) ||
+	    CallProfile( callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_CREDITLIMIT_BLOCKED )
+	  )
+	  customerProducts: CustomerProducts()
+	  eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		   )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43055");
+		transferRulesState.setQualificationResult("9047");
+end
+
+rule "ID3056"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0900333221" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43056");
+		transferRulesState.setQualificationResult("9535");
+end
+
+rule "ID3057"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NEWCUSTOMER )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  eval (
+			"yes".equals(callProfile.get("newcustomerconfirm"))
+		) 
+	then
+	  transferRulesState.setIdentificationResult("43057");
+      transferRulesState.setQualificationResult("9500");
+end
+
+rule "ID3058"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  callProfile: CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NEWCUSTOMER )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  eval (
+			"no".equals(callProfile.get("newcustomerconfirm"))
+		) 
+	then
+	  transferRulesState.setIdentificationResult("43058");
+      transferRulesState.setQualificationResult("9000");
+end
+
+rule "ID3060"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  customerProducts: CustomerProducts()
+	  eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		   )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43060");
+		transferRulesState.setQualificationResult("9009");
+end
+
+rule "ID3061"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  customerProducts: CustomerProducts()
+	  eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		   )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43061");
+		transferRulesState.setQualificationResult("9009");
+end
+
+rule "ID3062"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.EMPTY )
+	  customerProducts: CustomerProducts()
+	  eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		   )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43062");
+		transferRulesState.setQualificationResult("9043");
+end
+
+rule "ID3063"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.ERROR, menuD == R5RulesBean.EMPTY )
+	  customerProducts: CustomerProducts()
+	  eval (
+			customerProducts.hasMatchingProduct(null,null,null,null,null,null,null,null,null,null,null,null,"Mobile-N")
+		   )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43063");
+		transferRulesState.setQualificationResult("9009");
+end
+
+rule "ID3064"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800800851" )
+		MenuSelectionBean ( menuE == "TVA" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43064");
+		transferRulesState.setQualificationResult("9000");
+end
+
+rule "ID3065"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800800851" )
+		MenuSelectionBean ( menuE == "AA" )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43065");
+		transferRulesState.setQualificationResult("9007");
+end
+
+rule "ID3066"
+	no-loop
+	when
+		BusinessNumberBean ( businessNumber == "0800800851" )
+		MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43066");
+		transferRulesState.setQualificationResult("9007");
+end
+
+rule "ID3067"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_EASY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43067");
+		transferRulesState.setQualificationResult("9503");
+end
+
+rule "ID3491"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_NONUMBER )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43491");
+      transferRulesState.setQualificationResult("9138");
+end
+
+rule "ID3499"
+	no-loop
+	salience -1000 // Needs to be lower than all Variant_A rules to avoid incorrect trigger
+	when
+		BusinessNumberBean ( businessNumber == "0800803175" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_SME )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43499");
+		transferRulesState.setQualificationResult("8092");
+end
+
+// new product menu rules for OneIVR RES
+rule "ID3500"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43500");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineError");
+end
+rule "ID3501"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43501");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1");
+end
+rule "ID3502"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB== R5RulesBean.MENUOPTION_NP_ALM1_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43502");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Prm1");
+end
+rule "ID3503"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43503");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Prm2");
+end
+rule "ID3504"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43504");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Prm3");
+end
+rule "ID3505"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43505");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Prm4");
+end
+rule "ID3506"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43506");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Prm5");
+end
+rule "ID3507"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43507");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm1Error");
+end
+rule "ID3508"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43508");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2");
+end
+rule "ID3509"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB== R5RulesBean.MENUOPTION_NP_ALM2_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43509");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Prm1");
+end
+rule "ID3510"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43510");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Prm2");
+end
+rule "ID3511"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43511");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Prm3");
+end
+rule "ID3512"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43512");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Prm4");
+end
+rule "ID3513"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43513");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Prm5");
+end
+rule "ID3514"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43514");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm2Error");
+end
+rule "ID3515"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43515");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3");
+end
+rule "ID3516"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB== R5RulesBean.MENUOPTION_NP_ALM3_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43516");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Prm1");
+end
+rule "ID3517"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43517");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Prm2");
+end
+rule "ID3518"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43518");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Prm3");
+end
+rule "ID3519"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43519");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Prm4");
+end
+rule "ID3520"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43520");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Prm5");
+end
+rule "ID3521"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43521");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm3Error");
+end
+rule "ID3522"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43522");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4");
+end
+rule "ID3523"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB== R5RulesBean.MENUOPTION_NP_ALM4_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43523");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Prm1");
+end
+rule "ID3524"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43524");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Prm2");
+end
+rule "ID3525"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43525");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Prm3");
+end
+rule "ID3526"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43526");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Prm4");
+end
+rule "ID3527"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43527");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Prm5");
+end
+rule "ID3528"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELINE )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43528");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLineAlm4Error");
+end
+rule "ID3529"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43529");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessError");
+end
+rule "ID3530"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43530");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1");
+end
+rule "ID3531"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB== R5RulesBean.MENUOPTION_NP_ALM1_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43531");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Prm1");
+end
+rule "ID3532"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43532");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Prm2");
+end
+rule "ID3533"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43533");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Prm3");
+end
+rule "ID3534"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43534");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Prm4");
+end
+rule "ID3535"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_NP_ALM1_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43535");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Prm5");
+end
+rule "ID3536"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM1, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43536");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm1Error");
+end
+rule "ID3537"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43537");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2");
+end
+rule "ID3538"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB== R5RulesBean.MENUOPTION_NP_ALM2_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43538");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Prm1");
+end
+rule "ID3539"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43539");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Prm2");
+end
+rule "ID3540"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43540");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Prm3");
+end
+rule "ID3541"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43541");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Prm4");
+end
+rule "ID3542"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_NP_ALM2_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43542");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Prm5");
+end
+rule "ID3543"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM2, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43543");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm2Error");
+end
+rule "ID3544"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43544");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3");
+end
+rule "ID3545"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB== R5RulesBean.MENUOPTION_NP_ALM3_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43545");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Prm1");
+end
+rule "ID3546"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43546");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Prm2");
+end
+rule "ID3547"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43547");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Prm3");
+end
+rule "ID3548"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43548");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Prm4");
+end
+rule "ID3549"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_NP_ALM3_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43549");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Prm5");
+end
+rule "ID3550"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM3, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43550");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm3Error");
+end
+rule "ID3551"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4_TRANSFER )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43551");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4");
+end
+rule "ID3552"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB== R5RulesBean.MENUOPTION_NP_ALM4_PRM1 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43552");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Prm1");
+end
+rule "ID3553"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM2 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43553");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Prm2");
+end
+rule "ID3554"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM3 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43554");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Prm3");
+end
+rule "ID3555"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM4 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43555");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Prm4");
+end
+rule "ID3556"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_NP_ALM4_PRM5 )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43556");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Prm5");
+end
+rule "ID3557"
+	no-loop
+	when
+		BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+		CallProfile ( newProductSelection == R5RulesBean.WIRELESS ) ||
+		CallProfile ( newProductSelection == R5RulesBean.AUSLAND )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES ) ||
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+		MenuSelectionBean ( menuA == R5RulesBean.MENUOPTION_NP_ALM4, menuB == R5RulesBean.MENUOPTION_ERROR )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43557");
+		transferRulesState.setQualificationResult("OH_RULEID_RES_NPWLessAlm4Error");
+end
+
+rule "ID3701"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international != "true",
+	  			   connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43701");
+		transferRulesState.setQualificationResult("7557");
+end
+
+rule "ID3702"
+	no-loop
+  	salience 95
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerInBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43702");
+		transferRulesState.setQualificationResult("9165");
+end
+
+rule "ID3703"
+	no-loop
+  	salience 95
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, subSegment != R5RulesBean.SUBSEGMENT_PLATIN )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( customerInBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43703");
+		transferRulesState.setQualificationResult("9166");
+end
+
+rule "ID3704"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international != "true",
+	  			   connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43704");
+		transferRulesState.setQualificationResult("9561");
+end
+
+rule "ID3706"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "cbr_disp" )
+	then
+	  transferRulesState.setIdentificationResult("43706");
+	  transferRulesState.setQualificationResult("9089");
+end
+
+rule "ID3708"
+	no-loop
+	salience -1500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "oh_res_global_200" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43708");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID3710"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )	  
+	  MenuSelectionBean ( menuC == "TRANSFERALM", menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 	
+	then
+		transferRulesState.setIdentificationResult("43710");
+		transferRulesState.setQualificationResult("7549");
+end
+
+rule "ID3718"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_infinity" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43718");
+		transferRulesState.setQualificationResult("9013");
+end
+
+rule "ID3721"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43721");
+		transferRulesState.setQualificationResult("9561");
+end
+
+rule "ID3723"
+	no-loop
+	salience 500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( 	callDetailCollection contains R5RulesBean.SSFC,
+	  				carsTransferTarget == R5RulesBean.CARSTARGET_DUNNING_BLOCKED )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43723");
+		transferRulesState.setQualificationResult("9013");
+end
+
+rule "ID3724"
+	no-loop
+	salience 500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( 	callDetailCollection contains R5RulesBean.SSFC,
+	  				carsTransferTarget == R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43724");
+		transferRulesState.setQualificationResult("9033");
+end
+
+rule "ID3725"
+	no-loop
+	salience 500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( 	callDetailCollection contains R5RulesBean.SSFC,
+	  				carsTransferTarget == R5RulesBean.CARSTARGET_CREDITLIMIT_BLOCKED )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43725");
+		transferRulesState.setQualificationResult("9034");
+end
+
+rule "ID3726"
+	no-loop
+	salience 500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( 	callDetailCollection contains R5RulesBean.SSFC,
+	  				carsTransferTarget == R5RulesBean.CARSTARGET_BARRING_PREVENTION )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43726");
+		transferRulesState.setQualificationResult("9035");
+end
+
+rule "ID3728"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43728");
+		transferRulesState.setQualificationResult("9500");
+end
+
+rule "ID3733"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43733");
+		transferRulesState.setQualificationResult("9561");
+end
+
+rule "ID3735"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_200" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43735");
+		transferRulesState.setQualificationResult("9561");
+end
+
+rule "ID3737"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( international == "true", callDetailCollection contains "oh_pers_res_premium_vip_tag" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43737");
+      transferRulesState.setQualificationResult("9116");
+end
+
+rule "ID3738"
+	no-loop
+	salience 5
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( international == "true", callDetailCollection contains "oh_pers_res_premium_vip_nacht" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )	  
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43738");
+      transferRulesState.setQualificationResult("9116");
+end
+
+rule "ID3743"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international == "true", 
+	  			   callDetailCollection contains "oh_res_global_100",
+	  			   callDetailCollection contains "cbr_sa" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43743");
+		transferRulesState.setQualificationResult("9003");
+end
+
+rule "ID3748"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international == "true", 
+	  			   callDetailCollection contains "oh_res_global_100",
+	  			   callDetailCollection contains "cbr_dsla" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43748");
+		transferRulesState.setQualificationResult("9015");
+end
+
+rule "ID3753"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international == "true", 
+	  			   callDetailCollection contains "oh_res_global_100",
+	  			   callDetailCollection contains "cbr_abu" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43753");
+		transferRulesState.setQualificationResult("9153");
+end
+
+rule "ID3755"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( international == "true",
+	  			   callDetailCollection contains "cbr_allip" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43755");
+		transferRulesState.setQualificationResult("9167");
+end
+
+rule "ID3758"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType != R5RulesBean.WIRELESS, international == "true" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43758");
+		transferRulesState.setQualificationResult("9556");
+end
+
+rule "ID3762"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile(  connectionType == R5RulesBean.WIRELESS,
+	  			    international == "true",
+	  				callDetailCollection contains "oh_res_global_200" )
+	  CustomerProfile ( )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43762");
+		transferRulesState.setQualificationResult("9500");
+end
+
+rule "ID3778"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "MO", menuF == "PRE" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43778");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3779"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "MO", menuF == "PP" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43779");
+		transferRulesState.setQualificationResult("9507");
+end
+
+rule "ID3780"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "INPH", menuF == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43780");
+		transferRulesState.setQualificationResult("9508");
+end
+
+rule "ID3781"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "MO", menuF == "IN" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43781");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3784"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == "MO", menuF == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43784");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3787"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "MO", menuF == "PRE" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43787");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3788"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "MO", menuF == "PP" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43788");
+		transferRulesState.setQualificationResult("9507");
+end
+
+rule "ID3789"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "INPH", menuF == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43789");
+		transferRulesState.setQualificationResult("9508");
+end
+
+rule "ID3790"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "MO", menuF == "IN" )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43790");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3793"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == "MO", menuF == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43793");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3796"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_B )
+	  MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43796");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3821"
+	no-loop
+	salience 500
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( 	callDetailCollection contains R5RulesBean.SSFC,
+	  				carsTransferTarget  == R5RulesBean.CARSTARGET_CCC )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43821");
+		transferRulesState.setQualificationResult("9500");
+end
+
+rule "ID3823"
+	no-loop
+	salience 501
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  ( CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_CCC ) ||
+	    CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_DUNNING_BLOCKED ) ||
+	    CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS ) ||
+	    CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_BARRING_PREVENTION ) ||
+	    CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains R5RulesBean.SSFC, carsTransferTarget  == R5RulesBean.CARSTARGET_CREDITLIMIT_BLOCKED ) )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  ( R5RulesBean ( hasProductClusterFTTH == true ) ||
+	    R5RulesBean ( hasProductClusterAllIP == true) )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43823");
+		transferRulesState.setQualificationResult("9092");
+end
+
+rule "ID3825"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ACCESSDSL )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43825");
+		transferRulesState.setQualificationResult("9005");
+end
+
+rule "ID3826"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_PHONE )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43826");
+		transferRulesState.setQualificationResult("9037");
+end
+
+rule "ID3827"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_TV )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43827");
+		transferRulesState.setQualificationResult("9036");
+end
+
+rule "ID3828"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ALLIPFTTH, menuF == "RES" ) ||
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ALLIPFTTH, menuF == R5RulesBean.MENUOPTION_ERROR ) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43828");
+		transferRulesState.setQualificationResult("9170");
+end
+
+rule "ID3829"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_H )
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43829");
+		transferRulesState.setQualificationResult("0513");
+end
+
+rule "ID3830"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ALLIPFTTH, menuF == "SME", menuG == "SMEACCESS" ) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43830");
+		transferRulesState.setQualificationResult("9170");
+end
+
+rule "ID3831"
+	no-loop
+	when
+	 	BusinessNumberBean( variant == BusinessNumberBean.VARIANT_G )
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ALLIPFTTH, menuF == "SME", menuG == "SERVICE" ) ||
+	 	MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ALLIPFTTH, menuF == "SME", menuG == R5RulesBean.MENUOPTION_ERROR ) 
+		transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43831");
+		transferRulesState.setQualificationResult("8028");
+end
+
+rule "ID3848"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS,
+	   			   callDetailCollection contains "cbr_res_wless" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43848");
+		transferRulesState.setQualificationResult("9530");
+end
+
+rule "ID3865"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_GOLD )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43865");
+		transferRulesState.setQualificationResult("9003");
+end
+
+rule "ID3866"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("43866");
+		transferRulesState.setQualificationResult("9138");
+end 
+
+rule "ID3867"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterAllIP == true )
+	then
+		transferRulesState.setIdentificationResult("43867");
+		transferRulesState.setQualificationResult("9145");
+end 
+
+rule "ID3868"
+	no-loop
+	when
+   	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment != R5RulesBean.SUBSEGMENT_VIP )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterTV == true )
+	then
+		transferRulesState.setIdentificationResult("43868");
+		transferRulesState.setQualificationResult("9114");
+end
+
+rule "ID3868_Wireless"
+	no-loop
+	when
+   	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment != R5RulesBean.SUBSEGMENT_VIP )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43868");
+		transferRulesState.setQualificationResult("9114");
+end
+
+rule "ID3869"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterTV == true, hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("43869");
+		transferRulesState.setQualificationResult("9141");
+end 
+
+rule "ID3869_Wireless"
+	no-loop
+	salience 98
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("43869");
+		transferRulesState.setQualificationResult("9141");
+end 
+
+rule "ID3870"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterTV == true )
+	then
+		transferRulesState.setIdentificationResult("43870");
+		transferRulesState.setQualificationResult("9147");
+end 
+
+rule "ID3870_Wireless"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterAllIP == true )
+	then
+		transferRulesState.setIdentificationResult("43870");
+		transferRulesState.setQualificationResult("9147");
+end 
+
+rule "ID3871"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PASSWORD )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  r5b: R5RulesBean ( hasProductClusterAllIP == true )
+	then
+		transferRulesState.setIdentificationResult("43871");
+		transferRulesState.setQualificationResult("9146");
+end 
+
+rule "ID3877"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PASSWORD )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("43877");
+		transferRulesState.setQualificationResult("9139");
+end 
+
+rule "ID3915"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MBU ) ||
+	  CallProfile( customerType == R5RulesBean.CUSTOMERTYPE_MMO )
+	  MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43915");
+		transferRulesState.setQualificationResult("9505");
+end
+
+rule "ID3935"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_C )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43935");
+      transferRulesState.setQualificationResult("9528");
+end
+
+rule "ID3936"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_D )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET ) 
+	then
+	  transferRulesState.setIdentificationResult("43936");
+      transferRulesState.setQualificationResult("6502");
+end
+
+rule "ID3938"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_F )
+	  MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_THL1 )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43938");
+		transferRulesState.setQualificationResult("6502");
+end
+
+rule "ID3939"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_F )
+	  MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_THL2 )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43939");
+		transferRulesState.setQualificationResult("6501");
+end
+
+rule "ID3940"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_F )
+	  MenuSelectionBean ( menuE == R5RulesBean.MENUOPTION_ERROR )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43940");
+		transferRulesState.setQualificationResult("6502");
+end
+
+rule "ID3942"
+	no-loop
+	salience -100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_200" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43942");
+		transferRulesState.setQualificationResult("9561");
+end
+
+rule "ID3943"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_CBU )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43943");
+		transferRulesState.setQualificationResult("9120");
+end
+
+rule "ID3944"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43944");
+		transferRulesState.setQualificationResult("9000");
+end
+
+rule "ID3945"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43945");
+		transferRulesState.setQualificationResult("9002");
+end 
+
+rule "ID3946"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43946");
+		transferRulesState.setQualificationResult("9014");
+end 
+
+rule "ID3948"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PASSWORD ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43948");
+		transferRulesState.setQualificationResult("9014");
+end 
+
+rule "ID3949"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43949");
+		transferRulesState.setQualificationResult("9006");
+end 
+
+rule "ID3950"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43950");
+		transferRulesState.setQualificationResult("9000");
+end 
+
+rule "ID3955"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_ERROR ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43955");
+		transferRulesState.setQualificationResult("9500");
+end
+
+rule "ID3956"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_PHONE ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43956");
+		transferRulesState.setQualificationResult("9561");
+end 
+
+rule "ID3958"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43958");
+		transferRulesState.setQualificationResult("9531");
+end 
+
+rule "ID3959"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELESS, callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43959");
+		transferRulesState.setQualificationResult("9500");
+end 
+
+rule "ID3963"
+	no-loop
+	salience -200
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE ) ||
+	  CallProfile( connectionType == R5RulesBean.WIRELESS )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_TV ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43963");
+		transferRulesState.setQualificationResult("9041");
+end
+
+rule "ID3966"
+	no-loop
+	salience -100
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )	  			  
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_MOBILE_INTERNET ) 
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterDuplo == false )
+	then
+		transferRulesState.setIdentificationResult("43966");
+		transferRulesState.setQualificationResult("9561");
+end 
+
+rule "ID3968"
+	no-loop
+	salience 96
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+      CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterAllIP == false, hasProductClusterInternet == true )
+	then
+		transferRulesState.setIdentificationResult("43968");
+		transferRulesState.setQualificationResult("9014");
+end 
+
+rule "ID3969"
+	no-loop
+	salience 93
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+      CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )	  			  
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterABB == true )
+	then
+		transferRulesState.setIdentificationResult("43969");
+		transferRulesState.setQualificationResult("9057");
+end 
+
+rule "ID3971"
+	no-loop
+	salience 2000
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+	  (
+	  	CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_GOLD ) ||
+	  	CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )
+	  )	  			  
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterAllIP == false, hasProductClusterInternet == true )
+	then
+		transferRulesState.setIdentificationResult("43971");
+		transferRulesState.setQualificationResult("9015");
+end 
+
+rule "ID3973"
+	no-loop
+	salience 110
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+      CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterFTTH == true )
+	then
+		transferRulesState.setIdentificationResult("43973");
+		transferRulesState.setQualificationResult("9139");
+end 
+
+rule "ID3975"
+	no-loop
+	salience 99
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+      CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean( hasProductClusterAllIP == true )
+	then
+		transferRulesState.setIdentificationResult("43975");
+		transferRulesState.setQualificationResult("9146");
+end 
+
+rule "ID3977"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( identifiedByANI == "true",
+	  			   connectionType == R5RulesBean.WIRELESS, 
+	  			   callDetailCollection contains "oh_res_global_100" )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_STOERUNG, menuD == R5RulesBean.MENUOPTION_FESTNETZ_INTERNET )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43977");
+		transferRulesState.setQualificationResult("9014");
+end 
+
+rule "ID3978"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "oh_res_global_100", 
+	  			   callDetailCollection contains "cbr_dsl_tech" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43978");
+		transferRulesState.setQualificationResult("9014");
+end
+
+rule "ID3981"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "oh_res_global_100", 
+	  			   callDetailCollection contains "cbr_dslsa" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43981");
+		transferRulesState.setQualificationResult("9014");
+end
+
+rule "ID3983"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( connectionType == R5RulesBean.WIRELINE,
+	  			   international != "true",
+	  			   callDetailCollection contains "oh_res_global_100", 
+	  			   callDetailCollection contains "cbr_achsa" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43983");
+		transferRulesState.setQualificationResult("9002");
+end
+
+rule "ID3984"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELINE, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( youngsterBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43984");
+		transferRulesState.setQualificationResult("9180");
+end
+
+rule "ID3988"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELINE, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( youngsterBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43988");
+		transferRulesState.setQualificationResult("9184");
+end
+
+rule "ID3989"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_KUNDENDIENST, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( youngsterBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43989");
+		transferRulesState.setQualificationResult("9185");
+end
+
+rule "ID3990"
+	no-loop
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile ( connectionType == R5RulesBean.WIRELESS, 
+	  				callDetailCollection contains "oh_res_global_100" )
+	  CustomerProfile ( segment == R5RulesBean.SEGMENT_RES )
+	  MenuSelectionBean ( menuC == R5RulesBean.MENUOPTION_RECHNUNG, menuD == R5RulesBean.EMPTY )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	  R5RulesBean ( youngsterBestAge == true )
+	then
+		transferRulesState.setIdentificationResult("43990");
+		transferRulesState.setQualificationResult("9186");
+end
+
+rule "ID3998"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_quality_support_admin" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43998");
+		transferRulesState.setQualificationResult("9050");
+end
+
+rule "ID3999"
+	no-loop
+	salience 10
+	when
+	  BusinessNumberBean ( variant == BusinessNumberBean.VARIANT_A )
+	  CallProfile( callDetailCollection contains "srbr_quality_supporter_tech" )
+	  CustomerProfile (segment == R5RulesBean.SEGMENT_RES )
+	  transferRulesState : TransferRulesState(qualificationResult == TransferRulesState.NOT_SET )
+	then
+		transferRulesState.setIdentificationResult("43999");
+		transferRulesState.setQualificationResult("9053");
+end
+
+/*
+  Assign the qualificationResult to the queueNames set
+*/ 
+
+rule "SET_RETURN_QUEUENAME"
+  salience -1000
+  when
+    trs: TransferRulesState( qualificationResult != TransferRulesState.NOT_SET )
+  then
+    queueNames.add(trs.getQualificationResult());
+end

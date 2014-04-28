@@ -1,0 +1,187 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0080072472424-menu-level2.drl 107 2013-09-10 22:40:41Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-09-11 00:40:41 +0200 (Wed, 11 Sep 2013) $
+ * $Revision: 107 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.MenuSelectionBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption voiceSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("VOICE");
+  	  option.setPrompt("pm-voice");
+  	  option.setSkill("VOICE");
+  	  option.setEmergencyText("SA-VOICE"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption dataSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("DATA");
+  	  option.setPrompt("pm-data");
+  	  option.setSkill("DATA");
+  	  option.setEmergencyText("SA-DATA"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption dataSAconfirm() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("DATA");
+  	  option.setPrompt("pm-data");
+  	  option.setSkill("DATA");
+  	  option.setEmergencyText("SA-DATA"); 
+  	  option.setAction("CONFIRM");
+  	  return option;
+}
+
+function ExtendedMenuOption mobileSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("pm-mobile");
+  	  option.setSkill("MO");
+  	  option.setEmergencyText("SA-MOBILE"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mss() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MSS");
+  	  option.setPrompt("pm-mss");
+  	  option.setSkill("MSS");
+  	  option.setEmergencyText("MSS"); 
+  	  option.setAction("MSS");
+  	  return option;
+}
+
+function ExtendedMenuOption mobileSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("pm-mobile");
+  	  option.setSkill("MO");
+  	  option.setEmergencyText("SF-MOBILE"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption otherSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("OTHER");
+  	  option.setPrompt("pm-weiteres");
+  	  option.setSkill("OTHER");
+  	  option.setEmergencyText("OTHER"); 
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+   Menu level 2 depends on selection in level 1
+   
+   If level 1=SA then below   
+    * voiceSA
+	* dataSA (confirm option if special products)
+	* mobileSA
+	* mss
+	
+	If level 1=SF then below
+	* mobileSF
+	* otherSF
+	
+*/
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "01_Init_RulesBean"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+rule "02_Init_MenuSelectionBean"
+	no-loop
+	salience 20000
+	when
+		not (MenuSelectionBean())
+	then
+		assert ( new MenuSelectionBean(), true );
+end
+rule "03_MenuSelection_menuA_cbu/vp5cbu-0080072472424-menu-level1"
+	no-loop
+	salience 18000
+	when
+	  callProfile : CallProfile()
+	  msb : MenuSelectionBean ( menuA == MenuSelectionBean.EMPTY )
+	  eval ( callProfile.get("cbu/vp5cbu-0080072472424-menu-level1") != null )
+	then
+	  msb.setMenuA((String)callProfile.get("cbu/vp5cbu-0080072472424-menu-level1"));
+end
+
+rule "0800724724_Level2_SA_Level1"
+	no-loop
+	when
+		r5b: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+		MenuSelectionBean (menuA == "SA")
+	then
+		menuOptions.add(voiceSA());
+		menuOptions.add(dataSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(mss());
+		r5b.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "0800724724_Level2_SA_Level1_SMEProducts"
+	no-loop
+	salience 100
+	when
+		MenuSelectionBean (menuA == "SA")
+		r5b: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+		customerProducts: CustomerProducts()
+		eval ( 
+				customerProducts.hasMatchingProduct("DSL_Mobile",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("Business Internet light",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("Business Internet standard",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("BusinessConnect (IP-Centrex)",null,null,null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct("VPN-Professionell",null,null,null,null,null,null,null,null,null,null) ||
+				(
+				    customerProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!SAT",null,null) && 
+				    customerProducts.hasMatchingProduct("FX Bluewin DSL",null,null,null,null,null,null,null,"!FTTH",null,null) 
+				 )
+			 )
+	then
+		menuOptions.add(voiceSA());
+		menuOptions.add(dataSAconfirm());
+		menuOptions.add(mobileSA());
+		menuOptions.add(mss());
+		r5b.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "0800724724_Level2_SF_Level1"
+	no-loop
+	when
+		MenuSelectionBean (menuA == "SF")
+		r5b: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE )
+	then
+		menuOptions.add(mobileSF());
+		menuOptions.add(otherSF());
+		r5b.setState (R5RulesBean.PRODUKTMENU_DONE);
+end

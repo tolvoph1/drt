@@ -1,0 +1,3 @@
+[main] 2013-09-09 16:28:11,041 INFO                           RULES      RulesServiceDroolsImpl                   getTransferQueue                         2013-09-09,16:28:10.409,       631,null,transfer,cbu/vp5cbu-0582249143-transfer
+[main] 2013-09-09 16:28:11,045 INFO                           RULES      RulesServiceDroolsImpl                   getTransferQueue                         2013-09-09,16:28:11.044,         0,null,transfer,cbu/vp5cbu-0582249143-transfer
+[main] 2013-09-09 16:28:11,046 INFO                           RULES      RulesServiceDroolsImpl                   getTransferQueue                         2013-09-09,16:28:11.045,         0,null,transfer,cbu/vp5cbu-0582249143-transfer

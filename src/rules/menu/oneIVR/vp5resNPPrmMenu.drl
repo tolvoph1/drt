@@ -1,0 +1,351 @@
+/*
+ * (c)2013 Swisscom (Schweiz) AG.
+ *
+ * @(#) $Id: vp5resNPPrmMenu.drl 233 2014-04-08 06:19:14Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2014-04-08 08:19:14 +0200 (Tue, 08 Apr 2014) $
+ * $Revision: 233 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption npAlm1Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM1");
+  	  option.setPrompt("npprm-iPhone");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM2");
+  	  option.setPrompt("npprm-iPad-Support");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM3");
+  	  option.setPrompt("npprm-iPad-Einrichten");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM4");
+  	  option.setPrompt("npprm-iPad-Versand");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm1Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM1PRM5");
+  	  option.setPrompt("npprm-example015");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM1");
+  	  option.setPrompt("npprm-iPad-Support");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM2");
+  	  option.setPrompt("npprm-iPad-Einrichten");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM3");
+  	  option.setPrompt("npprm-iPad-Versand");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM4");
+  	  option.setPrompt("npprm-example024");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm2Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM2PRM5");
+  	  option.setPrompt("npprm-example025");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM1");
+  	  option.setPrompt("npprm-example031");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM2");
+  	  option.setPrompt("npprm-example032");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM3");
+  	  option.setPrompt("npprm-example033");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM4");
+  	  option.setPrompt("npprm-example034");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm3Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM3PRM5");
+  	  option.setPrompt("npprm-example035");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Prm1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM1");
+  	  option.setPrompt("npprm-example041");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Prm2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM2");
+  	  option.setPrompt("npprm-example042");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Prm3() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM3");
+  	  option.setPrompt("npprm-example043");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Prm4() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM4");
+  	  option.setPrompt("npprm-example044");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption npAlm4Prm5() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("NPALM4PRM5");
+  	  option.setPrompt("npprm-example045");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}  
+ 
+/*
+   
+    This is the 2nd level new product menu aka "product menu"
+    There is one rules file for Mobile, Fixnet and Ausland callers that is
+    referenced from the 4 separate 1st level rules files through the menu options
+    returned
+    
+    There is one rule for each selection in the 1st level menu and each variant Fixnet, Mobile and Ausland.
+        
+*/
+
+// Product menu when caller selected option 1 in ALM
+rule "Static_NewProductMenu_ALM1_Fixnet"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM1".equals(callProfile.get("oneIVRresNPAlmMenuFixnet")) )
+	then
+//		menuOptions.add(npAlm1Prm1());
+//		menuOptions.add(npAlm1Prm2());
+//		menuOptions.add(npAlm1Prm3());
+//		menuOptions.add(npAlm1Prm4());
+//		menuOptions.add(npAlm1Prm5());
+end
+
+rule "Static_NewProductMenu_ALM1_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM1".equals(callProfile.get("oneIVRresNPAlmMenuMobile")) )
+	then
+		menuOptions.add(npAlm1Prm1());
+		menuOptions.add(npAlm1Prm2());
+		menuOptions.add(npAlm1Prm3());
+		menuOptions.add(npAlm1Prm4());
+//		menuOptions.add(npAlm1Prm5());
+end
+
+rule "Static_NewProductMenu_ALM1_Ausland"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM1".equals(callProfile.get("oneIVRresNPAlmMenuAusland")) )
+	then
+//		menuOptions.add(npAlm1Prm1());
+//		menuOptions.add(npAlm1Prm2());
+//		menuOptions.add(npAlm1Prm3());
+//		menuOptions.add(npAlm1Prm4());
+//		menuOptions.add(npAlm1Prm5());
+end
+
+// Product menu when caller selected option 2 in ALM
+rule "Static_NewProductMenu_ALM2_Fixnet"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM2".equals(callProfile.get("oneIVRresNPAlmMenuFixnet")) )
+	then
+//		menuOptions.add(npAlm2Prm1());
+//		menuOptions.add(npAlm2Prm2());
+//		menuOptions.add(npAlm2Prm3());
+//		menuOptions.add(npAlm2Prm4());
+//		menuOptions.add(npAlm2Prm5());
+end
+
+rule "Static_NewProductMenu_ALM2_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM2".equals(callProfile.get("oneIVRresNPAlmMenuMobile")) )
+	then
+//		menuOptions.add(npAlm2Prm1());
+//		menuOptions.add(npAlm2Prm2());
+//		menuOptions.add(npAlm2Prm3());
+//		menuOptions.add(npAlm2Prm4());
+//		menuOptions.add(npAlm2Prm5());
+end
+
+rule "Static_NewProductMenu_ALM2_Ausland"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM2".equals(callProfile.get("oneIVRresNPAlmMenuAusland")) )
+	then
+//		menuOptions.add(npAlm2Prm1());
+//		menuOptions.add(npAlm2Prm2());
+//		menuOptions.add(npAlm2Prm3());
+//		menuOptions.add(npAlm2Prm4());
+//		menuOptions.add(npAlm2Prm5());
+end
+
+
+// Product menu when caller selected option 3 in ALM
+rule "Static_NewProductMenu_ALM3_Fixnet"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM3".equals(callProfile.get("oneIVRresNPAlmMenuFixnet")) )
+	then
+//		menuOptions.add(npAlm3Prm1());
+//		menuOptions.add(npAlm3Prm2());
+//		menuOptions.add(npAlm3Prm3());
+//		menuOptions.add(npAlm3Prm4());
+//		menuOptions.add(npAlm3Prm5());
+end
+
+rule "Static_NewProductMenu_ALM3_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM3".equals(callProfile.get("oneIVRresNPAlmMenuMobile")) )
+	then
+//		menuOptions.add(npAlm3Prm1());
+//		menuOptions.add(npAlm3Prm2());
+//		menuOptions.add(npAlm3Prm3());
+//		menuOptions.add(npAlm3Prm4());
+//		menuOptions.add(npAlm3Prm5());
+end
+
+rule "Static_NewProductMenu_ALM3_Ausland"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM3".equals(callProfile.get("oneIVRresNPAlmMenuAusland")) )
+	then
+//		menuOptions.add(npAlm3Prm1());
+//		menuOptions.add(npAlm3Prm2());
+//		menuOptions.add(npAlm3Prm3());
+//		menuOptions.add(npAlm3Prm4());
+//		menuOptions.add(npAlm3Prm5());
+end
+
+// Product menu when caller selected option 4 in ALM
+rule "Static_NewProductMenu_ALM4_Fixnet"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM4".equals(callProfile.get("oneIVRresNPAlmMenuFixnet")) )
+	then
+//		menuOptions.add(npAlm4Prm1());
+//		menuOptions.add(npAlm4Prm2());
+//		menuOptions.add(npAlm4Prm3());
+//		menuOptions.add(npAlm4Prm4());
+//		menuOptions.add(npAlm4Prm5());
+end
+
+rule "Static_NewProductMenu_ALM4_Mobile"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM4".equals(callProfile.get("oneIVRresNPAlmMenuMobile")) )
+	then
+//		menuOptions.add(npAlm4Prm1());
+//		menuOptions.add(npAlm4Prm2());
+//		menuOptions.add(npAlm4Prm3());
+//		menuOptions.add(npAlm4Prm4());
+//		menuOptions.add(npAlm4Prm5());
+end
+
+rule "Static_NewProductMenu_ALM4_Ausland"
+	no-loop
+	when
+		callProfile : CallProfile( ) 
+		eval ( "NPALM4".equals(callProfile.get("oneIVRresNPAlmMenuAusland")) )
+	then
+//		menuOptions.add(npAlm4Prm1());
+//		menuOptions.add(npAlm4Prm2());
+//		menuOptions.add(npAlm4Prm3());
+//		menuOptions.add(npAlm4Prm4());
+//		menuOptions.add(npAlm4Prm5());
+end

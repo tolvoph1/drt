@@ -1,0 +1,401 @@
+package com.nortel.ema.swisscom.bal.state
+
+/*
+	@(#) $Id: vp5res-getintouch-state.drl 119 2013-09-26 13:55:18Z tolvoph1 $
+	$Author: tolvoph1 $
+
+	Call flow for Get-In-Touch callers.
+	MAIN Callflows branch to this file in the Init state when SysOrsSessionID is not empty
+
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+import java.util.Arrays;
+import org.apache.commons.lang.StringUtils;
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "001_Init_R5RulesBean"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+/*
+	Preconditions to get into these rules are checked in 0800 800 800 rules and all other MAIN rules:
+	- SysChannel has to be "App", so no need to check for this value in here
+	- SysOrigANI must not be empty or null
+	- SysOrsSessionID must not be empty or null
+	
+	Remaining parameters to check in here are:
+	- SysRID
+	- SysRuleID
+	- SysRelevantNo
+	- SysConcern
+	- SysOrigLanguage
+*/
+
+/* 
+ First State in GetInTouch, nothing happened so far except recognizing that the call is a GIT call
+ */
+
+// If one of SysRID, SysRuleID, SysConcern or SysOrigLanguage is empty -> Transfer to default RID from ServiceConfiguration
+rule "010_Init_Empty_SysRID_SysRuleID_SysConcern_or_SysOrigLanguage_or_SysOrigLanguage_ML"
+	no-loop
+	when
+		callProfile: CallProfile( nextState == "Init" )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval ( 
+			StringUtils.isEmpty(callProfile.getSysRID()) ||
+			StringUtils.isEmpty(callProfile.getSysRuleID()) ||
+			StringUtils.isEmpty(callProfile.getSysConcern()) ||
+				(
+				!StringUtils.equalsIgnoreCase("de",callProfile.getSysOrigLanguage()) &&
+				!StringUtils.equalsIgnoreCase("fr",callProfile.getSysOrigLanguage()) &&
+				!StringUtils.equalsIgnoreCase("it",callProfile.getSysOrigLanguage()) &&
+				!StringUtils.equalsIgnoreCase("en",callProfile.getSysOrigLanguage())
+				)
+			 )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");	
+		serr.setOutputVar1("jingle welcome");
+		serr.setNextState("WriteLogThenDefaultRIDTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// "Default" rule for Init if none of the above is true, so it's a valid GetInTouch call
+rule "020_Init_AllOthers"
+	no-loop
+	salience -1
+	when
+		callProfile: CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETLANG");
+		serr.setOutputVar1(callProfile.getSysOrigLanguage());
+		serr.setNextState("CheckRelevantNumber");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// SysRelevantNo is empty. SysChannel must be "App" (see above) and SysRID/SysRuleID are not empty (see rule 010)
+rule "030a_CheckRelevantNumber_Empty"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "CheckRelevantNumber" )
+		eval (
+			StringUtils.isEmpty(callProfile.getSysRelevantNo())
+			 )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");	
+		serr.setOutputVar1("jingle welcome");
+		serr.setNextState("WriteLogThenTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// Last pre-check, if this is true we start the main Get-In-Touch flow
+rule "030b_CheckRelevantNumber_NotEmpty"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "CheckRelevantNumber" )
+		eval (
+			!StringUtils.isEmpty(callProfile.getSysRelevantNo())
+			 )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");	
+		serr.setNextState("GetInTouchMainFlow");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+
+/*
+	Main Get-In-Touch Flow for callers that meet all preconditions above
+*/
+rule "200_MainFlow_Start"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "GetInTouchMainFlow" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETSESSIONANI");		
+		serr.setOutputVar1(callProfile.getSysRelevantNo());
+		serr.setNextState("SetPhonenumberFromSession");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+	
+rule "210_SetPhonenumberFromSession"
+	no-loop
+	when
+		CallProfile ( nextState == "SetPhonenumberFromSession" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETPNFROMSESSION");		
+		serr.setOutputVar1("true");
+		serr.setNextState("Welcome");
+		serr.setState(StateEngineRulesResult.DONE);
+end	
+	
+rule "220_Welcome_OpeningHours"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKOH");
+		serr.setOutputVar1("OH_RES_WELCOME");
+		serr.setNextState("WelcomeActual");
+		serr.setState(StateEngineRulesResult.DONE);
+end	
+	
+rule "230a1_WelcomeActual_Morning"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", resultOH == "morning" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-morning");
+		serr.setNextState("VIPRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "230a2_WelcomeActual_Day"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", resultOH == "day" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-day");
+		serr.setNextState("VIPRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "230a3_WelcomeActual_Evening"
+	no-loop
+	when
+		CallProfile ( nextState == "WelcomeActual", resultOH == "evening" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-evening");
+		serr.setNextState("VIPRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "230a4_WelcomeActual_Default"
+	no-loop
+	salience -1
+	when
+		CallProfile ( nextState == "WelcomeActual" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("welcome-general");
+		serr.setNextState("VIPRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "240a_VIPRouting_IsVIP_CheckOH"
+	no-loop
+	when
+		CallProfile ( nextState == "VIPRouting" )
+		CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_VIP )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("CHECKOH");		
+		serr.setOutputVar1("OH_PERS_RES_PREMIUM_VIP");	
+		serr.setNextState("CheckOHVIPResult");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "240b_VIPRouting_NoVIP_PROCEED"
+	no-loop
+	salience -1
+	when
+		CallProfile ( nextState == "VIPRouting" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");		
+		serr.setNextState("CheckPlatinRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "250a_CheckOHVIPResult_Active"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "CheckOHVIPResult" )
+		eval (
+				StringUtils.equals("tag",callProfile.getResultOH()) ||
+				StringUtils.equals("nacht",callProfile.getResultOH())
+			 )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("WRITELOG");	
+		serr.setOutputVar1("Get-In-Touch");
+		serr.addToOutputColl1("Client",callProfile.getSysHttpClient());
+		serr.addToOutputColl1("Concern",callProfile.getSysConcern());
+		serr.setNextState("VIPTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "250b_CheckOHVIPResult_Inactive"
+	no-loop
+	salience -1
+	when
+		CallProfile ( nextState == "CheckOHVIPResult" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");	
+		serr.setNextState("CheckPlatinRouting");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "260a_CheckPlatinRouting_IsPlatinCustomer"
+  	no-loop
+  	when
+		callProfile: CallProfile ( nextState == "CheckPlatinRouting" )
+    	CustomerProfile ( segment == R5RulesBean.SEGMENT_RES, fineSegment == R5RulesBean.FINESEGMENT_PP, subSegment == R5RulesBean.SUBSEGMENT_PLATIN )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )    
+  	then
+		serr.setAction("WRITELOG");	
+		serr.setOutputVar1("Get-In-Touch");
+		serr.addToOutputColl1("Client",callProfile.getSysHttpClient());
+		serr.addToOutputColl1("Concern",callProfile.getSysConcern());
+		serr.setNextState("PlatinTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "260b_CheckPlatinRouting_NoPlatinCustomer"
+  	no-loop
+  	salience -1
+  	when
+		CallProfile ( nextState == "CheckPlatinRouting" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )    
+  	then
+		serr.setAction("PROCEED");	
+		serr.setNextState("WriteLogThenTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+
+// Write Log entry before transferring
+rule "400_WriteLog_Then_Transfer"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "WriteLogThenTransfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("WRITELOG");	
+		serr.setOutputVar1("Get-In-Touch");
+		serr.addToOutputColl1("Client",callProfile.getSysHttpClient());
+		serr.addToOutputColl1("Concern",callProfile.getSysConcern());
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "410_WriteLog_Then_DefaultRIDTransfer"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "WriteLogThenDefaultRIDTransfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("WRITELOG");	
+		serr.setOutputVar1("Get-In-Touch");
+		serr.addToOutputColl1("Client",callProfile.getSysHttpClient());
+		serr.addToOutputColl1("Concern",callProfile.getSysConcern());
+		serr.setNextState("DefaultRIDTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// The next block contains all Transfer rules
+// Finally the actual transfer with all the information, logs need to be written before this
+rule "500_TransferToSysRID_With_RuleID"
+	no-loop
+	when
+		callProfile: CallProfile ( nextState == "Transfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFERRID");	
+		serr.setOutputVar1(callProfile.getSysRID());
+		serr.setOutputVar2(callProfile.getSysRuleID());
+		serr.setOutputVar3("true");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "510_PlatinTransfer"
+  	no-loop
+  	when
+  		serviceConfiguration: ServiceConfigurationMap()
+		callProfile: CallProfile ( nextState == "PlatinTransfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )    
+  	then
+		serr.setAction("TRANSFERRID");	
+		serr.setOutputVar1((String)serviceConfiguration.get("vp.res.getInTouch.PlatinRID"));
+		serr.setOutputVar2(callProfile.getSysRuleID());
+		serr.setOutputVar3("true");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "520_VIPTransfer"
+  	no-loop
+  	when
+  		serviceConfiguration: ServiceConfigurationMap()
+		callProfile: CallProfile ( nextState == "VIPTransfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )    
+  	then
+		serr.setAction("TRANSFER");		
+		serr.setOutputVar1("oneIVR/vp5resTransfer");	
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "530_DefaultRIDTransfer"
+  	no-loop
+  	when
+  		serviceConfiguration: ServiceConfigurationMap()
+		callProfile: CallProfile ( nextState == "DefaultRIDTransfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )    
+  	then
+		serr.setAction("TRANSFERRID");	
+		serr.setOutputVar1((String)serviceConfiguration.get("vp.res.getInTouch.DefaultRID"));
+		serr.setOutputVar2((String)serviceConfiguration.get("vp.res.getInTouch.DefaultRuleID"));
+		serr.setOutputVar3("true");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+// Fallback rule, points to Transfer state
+rule "900_Fallback_Transfer"
+	no-loop
+	salience -10000
+	when
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("WriteLogThenTransfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end

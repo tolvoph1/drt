@@ -1,0 +1,70 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0800724001-menu-level2.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption voiceAXA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("VOICE_AXA");
+  	  option.setPrompt("pm-voiceAXA");
+  	  option.setSkill("VOICE_AXA");
+  	  option.setEmergencyText("SA-VOICE"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption dataAXA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("DATA_AXA");
+  	  option.setPrompt("pm-dataAXA");
+  	  option.setSkill("DATA_AXA");
+  	  option.setEmergencyText("SA-DATA"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mss() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MSS");
+  	  option.setPrompt("pm-mss-AXA");
+  	  option.setSkill("MSS");
+  	  option.setEmergencyText("SA-MSS");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption mobile() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MO");
+  	  option.setPrompt("pm-mobile");
+  	  option.setSkill("MO");
+  	  option.setEmergencyText("SA-MOBILE"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+rule "0800724001_Level2"
+	no-loop
+	when
+
+	then
+		menuOptions.add(voiceAXA());
+		menuOptions.add(dataAXA());
+		menuOptions.add(mss());
+		menuOptions.add(mobile());
+end

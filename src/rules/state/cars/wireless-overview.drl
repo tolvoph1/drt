@@ -1,0 +1,4655 @@
+package com.nortel.ema.swisscom.bal.state.cars
+
+/*
+	@(#) $Id: wireless-overview.drl 156 2013-12-10 08:00:59Z tolvoph1 $
+	$Author: tolvoph1 $
+	
+	Wireless Overview
+	
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.CARSRulesBean;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+
+import java.util.Set;
+import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+
+
+/* ****************************************************************************************
+   Start of the rules
+   ****************************************************************************************/
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "001_Init_CARSRulesBean"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 20000
+	when
+		not (CARSRulesBean(  ))
+	then
+		assert ( new CARSRulesBean(), true );
+end
+
+// Take the CARS attribute string from CustomerProfile.carsStatus and assign to CARS Bean
+// using the "initialize" method that splits the string and sets all values to true for
+// the keys that are in carsStatus
+rule "002_Init_carsStatus"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 10000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state != CARSRulesBean.STATUS_VALUES )
+	  customerProfile: CustomerProfile()
+	then
+	  crb.initialize(customerProfile.getCarsStatus());
+	  crb.setState(CARSRulesBean.STATUS_VALUES);
+end
+
+// Initialize all remaining attributes 
+rule "003_A_Init_creditlimit"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( )
+	  customerProfile: CustomerProfile();
+	then
+	  crb.setCreditLimit(customerProfile.getBillingProfileCreditLimit());
+end
+
+rule "003_B_Init_currentBalance"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( currentBalance == CARSRulesBean.EMPTY )
+	  customerProfile: CustomerProfile();
+	then
+	  crb.setCurrentBalance(customerProfile.getCurrentBalance());
+end
+
+rule "003_C_Init_minimumTopUpAmount"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( minimumTopUpAmount == CARSRulesBean.EMPTY )
+	  customerProfile: CustomerProfile();
+	then
+	  crb.setMinimumTopUpAmount(customerProfile.getMinimumTopUpAmount());
+end
+
+rule "003_D_Init_unbilledCost"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( unbilledCost == CARSRulesBean.EMPTY )
+	  customerProfile: CustomerProfile();
+	then
+	  crb.setUnbilledCost(customerProfile.getUnbilledCost());
+end
+
+rule "003_E_Init_aniConfirmed"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  callProfile: CallProfile();
+	then
+	  crb.setAniConfirmed(callProfile.getIdentifiedByANI());
+end
+
+rule "003_F_Init_resCustomer"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  customerProfile: CustomerProfile( segment == R5RulesBean.SEGMENT_RES )
+	then
+	  crb.setResCustomer("true");
+end
+
+rule "003_G_Init_CustomerOver18"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  serviceConfiguration: ServiceConfigurationMap()
+	  customerProfile: CustomerProfile()
+	  eval (
+	  		customerProfile.getAge() != null &&
+	  		serviceConfiguration.get("cars.wless.ov.limit.age") != null &&
+			new Integer((String)customerProfile.getAge()).intValue() >= new Integer((String)serviceConfiguration.get("cars.wless.ov.limit.age")).intValue()
+		   )
+	then
+	  crb.setCustomerOver18("true");
+end
+
+rule "003_H_Init_StructuredCustomer_true"
+	agenda-group "P1"
+	auto-focus
+	no-loop
+	salience 9000
+	when
+	  StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	  crb: CARSRulesBean( state == CARSRulesBean.STATUS_VALUES )
+	  customerProfile: CustomerProfile()
+	  eval ( 
+			 !StringUtils.equals(customerProfile.getOuTypeCode(),"Person") ||
+			 StringUtils.equals(customerProfile.getBillAccntID(),"" )
+		   )
+	then
+	  crb.setStructuredCustomer("true");
+end
+
+//---------------------------------------------------------------------------------------------------------------------
+
+
+// The actual rules.
+// One rule per path through the overview workflow
+// Referring to Excel with Scenario IDs
+
+// Top rule that checks if Wireless Workflow is enabled in total
+
+rule "P2_ID0MASTER_Wireless_Inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	salience 1000
+	when
+	    CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval (
+	    	   serviceConfiguration.get("cars.wless.active") != null &&
+	    	   !serviceConfiguration.get("cars.wless.active").equals("true")
+	    	 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100100");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID0MASTER_Wireless_Active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	salience 1000
+	when
+	    CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		serviceConfiguration: ServiceConfigurationMap()
+		eval (
+	    	   serviceConfiguration.get("cars.wless.active") != null &&
+	    	   serviceConfiguration.get("cars.wless.active").equals("true")
+	    	 )
+	then
+		serr.setAction("GETSTATUS");
+		serr.setNextState("RunOverview");
+		serr.setState(StateEngineRulesResult.DONE);
+end    
+
+//ID100
+rule "P2_ID100_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		crb: CARSRulesBean ( structuredCustomer == true)
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100102");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID101_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == false, creditLimit == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100107|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID102a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == false, aniConfirmed == true, creditLimit == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100107|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID102i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == false, aniConfirmed == true, creditLimit == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100107|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID103_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == false, aniConfirmed == false, creditLimit == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100107|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID104_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, creditLimit == false,
+						dunningLetter == false, dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID107_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID110_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID111a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID111i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID112_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, aniConfirmed == false, dunningLetter == false, dunningSMS == false, 
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID113_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID116_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID119_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == false, 
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID120a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID120i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID121_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, aniConfirmed == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == false, 
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID122a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID122i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID123_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, aniConfirmed == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100141|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID124_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID127_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID130_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID131a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID131i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID132_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, aniConfirmed == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID133_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID136_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID139_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID140a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID140i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID141_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == false, aniConfirmed == false, dunningLetter == true, recentDunningLetter == false,
+		 				dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID142a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID142i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID143_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == false, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100143|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID144a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID144i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == true, dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID145_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == false, aniConfirmed == false, dunningLetter == true, recentDunningLetter == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100113|100140|100142|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID147a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID147i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true ,
+						dunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID148_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == false, dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID150a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID150i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID151_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID152_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, dunningLetter == false, dunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID153a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID153i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID154_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID156a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID156i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID157_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID159a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID159i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID160_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID161_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, dunningLetter == false,
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == true)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID162a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID162i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID163_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID164a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID164i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID165_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100141|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID167a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID167i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID168_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID170a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID170i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID171_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID172_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true,
+						recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID173a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID173i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID174_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID176a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID176i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID177_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID179a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID179i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID180_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false,
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID181_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID182a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID182i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID183_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, 
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID184a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID184i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID185_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100143|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID186a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID186i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == true, 
+						dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID187_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == false, aniConfirmed == false, 
+						dunningLetter == true, recentDunningLetter == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100115|100140|100142|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID188_Transfer2DunningBlocked_Step1_DisableTransferPrompt"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true, 
+		 				creditLimit == true, creditLimitBlock == true, aniConfirmed == false )
+	then
+		serr.setAction("TRANSFERPROMPTSWITCH");		
+		serr.setOutputVar1("false");
+		serr.setNextState("Transfer2DunningBlockedAfterTransferPromptSwitch188");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID188_Transfer2DunningBlocked_Step2_Transfer"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "Transfer2DunningBlockedAfterTransferPromptSwitch188" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CREDITLIMIT_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100117");		
+		serr.addToOutputColl2("prompt","GesperrtesNatelInfo0800Wireless");
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID189a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100121");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID189i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100121");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID190a_WF6_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.6") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.6").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow6");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100123|100125");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID190i_WF6_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.6") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.6").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100123|100125");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID191a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == true)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100123|100124");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID191i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == true)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100123|100124");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID192a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100122");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID192i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == false, customerOver18 == true, creditLimitOverValue == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100119|100120|100122");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID193a_WF7_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.7") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.7").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow7");		
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100118");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID193i_WF7_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( interactionHistoryAvailable == true,
+						structuredCustomer == false, dunningProcedure == false, resCustomer == true,
+						creditLimit == true, creditLimitBlock == true, aniConfirmed == true, 
+						debarringPending == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.7") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.7").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100105|100112|100114|100116|100118");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID194_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == true, 
+		 				interactionHistoryAvailable == false, block == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100109|100111");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID195_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, resCustomer == true, 
+		 				interactionHistoryAvailable == false, block == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100109|100110");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID196_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID199_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID202_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == true)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID203a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID203i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID204_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == false, dunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID205_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID208_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false, 
+		 				partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID211_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID212a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID212i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID213_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == false, partialBlock == true,
+		 				recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID214a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID214i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID215_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100141|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID216_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,  
+		 				partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID219_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,  
+		 				partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID222_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, 
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID223a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID223i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID224_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID225_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true,  
+		 				recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100151|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID228_Back2Portal"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true,  
+		 				recentDunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100150|100153|100159");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID231_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID232a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID232i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID233_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+		 				partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID234a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID234i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID235_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == true, recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100143|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID236a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID236i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == true,
+		 				dunningLetter == true, recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID237_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == false, aniConfirmed == false,
+		 				dunningLetter == true, recentDunningLetter == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100113|100140|100142|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID239a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == false, partialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID239i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == false, partialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID240_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, 
+						dunningSMS == false, partialBlock == false)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID242a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID242i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID243_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID244_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, dunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID245a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID245i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID246_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, dunningSMS == false, 
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID248a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID248i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID249_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID251a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID251i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID252_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID253_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, dunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID254a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID254i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID255_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, dunningSMS == true,
+						recentDunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID256a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true,	recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID256i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == false, 
+						dunningSMS == true,	recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID257_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == false, 
+						dunningSMS == true,	recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100141|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID259a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID259i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID260_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID262a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID262i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID263_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, recentPartialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID264_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == false, partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == true)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID265a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID265i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID266_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100145|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID268a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID268i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100151|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID269_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100151|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID271a_WF8_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow8");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID271i_WF8_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == false)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.8") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.8").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100153|100158|100160");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID272_Transfer2CCC"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == false)
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CCC);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100153|100158|100161");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID273_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, dunningLetter == true, recentDunningLetter == false, 
+						dunningSMS == true, recentDunningSMS == false, partialBlock == true, 
+						recentPartialBlock == true, partialBlockRecentPP == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100152|100154");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID274a_WF4_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow4");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID274i_WF4_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.4") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.4").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100152|100155|100156");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID275_Transfer2BarringPrevention"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true,
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == false,
+						partialBlock == true, recentPartialBlock == true, partialBlockRecentPP == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_BARRING_PREVENTION);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100147|100150|100152|100155|100157");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID276a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID276i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100146|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID277_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == false, dunningSMS == true, recentDunningSMS == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100143|100144|100146|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID278a_WF2_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow2");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID278i_WF2_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == true, dunningLetter == true, 
+						recentDunningLetter == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.2") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.2").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100142|100148");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end 
+
+rule "P2_ID279_Transfer2DunningLetterSMS"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == false, aniConfirmed == false, dunningLetter == true, 
+						recentDunningLetter == true )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_LETTER_SMS);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100115|100140|100142|100149");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID280_Transfer2DunningBlocked_Step1_DisableTransferPrompt"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == false, creditLimit == true,
+		 				creditLimitBlock == true, aniConfirmed == false )
+	then
+		serr.setAction("TRANSFERPROMPTSWITCH");		
+		serr.setOutputVar1("false");
+		serr.setNextState("Transfer2DunningBlockedAfterTransferPromptSwitch280");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID280_Transfer2DunningBlocked_Step2_Transfer"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "Transfer2DunningBlockedAfterTransferPromptSwitch280" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_CREDITLIMIT_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100117");		
+		serr.addToOutputColl2("prompt","GesperrtesNatelInfo0800Wireless");
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID281a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, customerOver18 == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100121");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID281i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, customerOver18 == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100121");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID282a_WF6_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.6") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.6").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow6");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100123|100125");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID282i_WF6_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.6") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.6").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100123|100125");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID283a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == true)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100123|100124");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID283i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == false, creditLimitRecentPP == true)
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100123|100124");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID284a_WF5_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow5");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100122");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID284i_WF5_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == false, 
+						customerOver18 == true, creditLimitOverValue == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.5") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.5").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100119|100120|100122");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID285a_WF7_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.7") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.7").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow7");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100118");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID285i_WF7_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true,
+						interactionHistoryAvailable == true, block == false, creditLimit == true,
+						creditLimitBlock == true, aniConfirmed == true, debarringPending == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.7") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.7").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100127|100112|100114|100116|100118");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end  
+
+rule "P2_ID286_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, recentBlock == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100129");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID287_Transfer2DunningBlocked_Step1_DisableTransferPrompt"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, recentBlock == true, aniConfirmed == false )
+	then
+		serr.setAction("TRANSFERPROMPTSWITCH");		
+		serr.setOutputVar1("false");
+		serr.setNextState("Transfer2DunningBlockedAfterTransferPromptSwitch287");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID287_Transfer2DunningBlocked_Step2_Transfer"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "Transfer2DunningBlockedAfterTransferPromptSwitch287" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100131");		
+		serr.addToOutputColl2("prompt","GesperrtesNatelInfo0800Wireless");
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID288_Transfer2DunningBlocked"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == false,
+		 				dunningLevelMajor == false )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1(R5RulesBean.CARSTARGET_DUNNING_BLOCKED);
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100135|100137");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID289a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == false,
+		 				dunningLevelMajor == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow1-ns");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100135|100136");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID289i_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == false,
+		 				dunningLevelMajor == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100135|100136");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID290a_WF1SC_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == true,
+		 				recentPaymentCheck == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1sc") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1sc").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow1-sc");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100134|100139");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID290i_WF1SC_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == true,
+		 				recentPaymentCheck == false )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1sc") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1sc").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100134|100139");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID291a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == true,
+		 				recentPaymentCheck == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow1-ns");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100134|100138");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID291i_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == false, dunningLevelMinor == true,
+		 				recentPaymentCheck == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100133|100134|100138");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID292a_WF1NS_active"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("true")
+			 )
+	then
+		serr.setAction("RUNCALLFLOW");
+		serr.setOutputVar1("cars/wireless-callflow1-ns");		
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100132");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "P2_ID292i_WF1NS_inactive"
+	agenda-group "P2"
+	auto-focus
+	no-loop
+	when
+	    CallProfile ( nextState == "RunOverview" )
+		serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )
+		CARSRulesBean ( structuredCustomer == false, dunningProcedure == true, resCustomer == true, 
+		 				interactionHistoryAvailable == true, block == true, aniConfirmed == true,
+		 				recentBlock == true, quickProcedure == true )
+		serviceConfiguration: ServiceConfigurationMap()		
+		eval (
+				serviceConfiguration.get("cars.wless.active.callflow.1ns") != null &&
+				serviceConfiguration.get("cars.wless.active.callflow.1ns").equals("false")
+			 )
+	then
+		serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("100101|100103|100106|100108|100104|100126|100128|100130|100132");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "ZZZ_FALLBACK"
+	salience -10000
+	when
+	    serr : StateEngineRulesResult(state != StateEngineRulesResult.DONE )	
+	then
+	    serr.setAction("BACK2PORTAL");
+		serr.setOutputVar2("FALLBACK");		
+		serr.setNextState("DONE");
+		serr.setState(StateEngineRulesResult.DONE);
+end

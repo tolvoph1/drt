@@ -1,0 +1,2019 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smeProduktMenu.drl 153 2013-11-25 09:43:09Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-11-25 10:43:09 +0100 (Mon, 25 Nov 2013) $
+ * $Revision: 153 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeProduktMenue
+
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import org.apache.commons.lang.StringUtils;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption rechnung() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("RECHNUNG");
+  	  option.setPrompt("pm-einerechnung");
+  	  option.setEmergencyText("SF-RECHNUNG");
+  	  option.setAction("RECHNUNG");
+  	  return option;
+} 
+
+function ExtendedMenuOption festnetzSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("FESTNETZ");
+  	  option.setPrompt("pm-festnetztelefonie");
+  	  option.setEmergencyText("SA-FESTNETZ");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption festnetzSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("FESTNETZ");
+  	  option.setPrompt("pm-festnetztelefonie");
+  	  option.setEmergencyText("SF-FESTNETZ");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption mobileSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MOBILE");
+  	  option.setPrompt("pm-mobileinternet");
+  	  option.setEmergencyText("SA-MOBILE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption mobileSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("MOBILE");
+  	  option.setPrompt("pm-mobileinternet");
+  	  option.setEmergencyText("SF-MOBILE");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption internetSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INTERNET");
+  	  option.setPrompt("pm-internetoffice");
+  	  option.setEmergencyText("SA-INTERNET");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption internetSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("INTERNET");
+  	  option.setPrompt("pm-internettv");
+  	  option.setEmergencyText("SF-INTERNET");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption tvSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("TV");
+  	  option.setPrompt("pm-tv");
+  	  option.setEmergencyText("SA-TV");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption ithostingSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ITHOSTING");
+  	  option.setPrompt("pm-ithosting");
+  	  option.setEmergencyText("SA-ITHOSTING");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}  
+
+function ExtendedMenuOption ithostingSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ITHOSTING");
+  	  option.setPrompt("pm-ithosting");
+  	  option.setEmergencyText("SF-ITHOSTING");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}     
+
+function ExtendedMenuOption pbxSA() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("VERMITTLUNGSANLAGE");
+  	  option.setPrompt("pm-tva");
+  	  option.setEmergencyText("SA-PBX");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+
+function ExtendedMenuOption pbxSF() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("VERMITTLUNGSANLAGE");
+  	  option.setPrompt("pm-tva2");
+  	  option.setEmergencyText("SF-PBX");
+  	  option.setAction("TRANSFER");
+  	  return option;
+}  
+
+/*
+	Initialize Rules Bean and check for String values in passed
+	parameters. Put those in "constants" attributes of the bean
+*/
+rule "000_Init"
+	no-loop
+	salience 20000
+	when
+		not (R5RulesBean(  ))
+	then
+		assert ( new R5RulesBean(), true );
+end
+
+/*
+	Rules to generate Product clusters. If location of information
+	or String values change only these rules need to be changed
+*/
+rule "001_GenerateProductClusterFixnet"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( 
+				customerProducts.contains("EconomyLine") ||
+				customerProducts.contains("MultiLine ISDN") ||
+				customerProducts.contains("BusinessLine ISDN") ||
+				customerProducts.contains("BusinessLine Basisanschluss") ||
+				customerProducts.contains("BusinessLine Primäranschluss") ||
+				customerProducts.contains("Business Numbers") ||
+				customerProducts.contains("Business Connect IMS") 
+			 );
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterFixnet(true);
+end
+
+rule "002_GenerateProductClusterMobile"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.hasMatchingProduct(null,null,"+4176*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4177*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4178*",null,null,null,null,null,null,null,null) ||
+				customerProducts.hasMatchingProduct(null,null,"+4179*",null,null,null,null,null,null,null,null) ||
+				customerProducts.contains("DSL_Mobile")
+			 );
+		handle: R5RulesBean() ;	
+	then
+		handle.setHasProductClusterMobile(true);
+end
+
+rule "003_GenerateProductClusterInternet"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.contains("FX Bluewin DSL") ||
+				customerProducts.contains("FX Bluewin Dial-Up") ||
+				customerProducts.contains("FX Bluewin nakedAccount") ||
+				customerProducts.contains("DSL-Professionell") ||
+				customerProducts.contains("IP-Plus Business Internet") ||
+				customerProducts.contains("Business Internet light") ||
+				customerProducts.contains("Business Internet standard")
+			)
+		handle: R5RulesBean();	
+	then
+		handle.setHasProductClusterInternet(true);		
+end
+
+rule "004_GenerateProductClusterTV"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( customerProducts.contains("BluewinTV") );
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterTV(true);
+end
+
+
+rule "005_GenerateProductClusterITHosting"
+	no-loop
+	salience 10000
+	when
+		customerProducts: CustomerProducts()
+		callProfile: CallProfile()
+		eval (
+				customerProducts.contains("VPN-Professionell") ||
+				customerProducts.contains("Hosted Exchange Professionell") ||
+				customerProducts.contains("Hosted Exchange Professional 2.0") ||
+				customerProducts.contains("Online Backup Professional") ||
+				customerProducts.contains("Shared Office Professional") ||
+				customerProducts.contains("KMU Office") ||
+				StringUtils.equals(callProfile.getOptionOfferName(),"KMU Office W+C 4Star")
+			 )
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterITHosting(true);
+end
+
+rule "006_GenerateProductClusterPBX"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval (
+				customerProducts.contains("PBX Miete") || 
+				customerProducts.contains("PBX Kauf") ||
+				customerProducts.contains("PBX Wartungsvertrag") ||
+				customerProducts.contains("PBX Migrationsvertrag") ||
+				customerProducts.contains("BusinessConnect (IP-Centrex)")
+			)
+		handle: R5RulesBean() ;
+	then
+		handle.setHasProductClusterPBX(true);
+end
+
+rule "007_GenerateProductClusterAllIP"
+	no-loop
+	salience 10000
+	when
+		customerProducts : CustomerProducts( ) 
+		eval ( customerProducts.hasMatchingProduct(null,null,null,null,"ALL IP",null,null,null,null,null,null) )
+		handle: R5RulesBean()
+	then
+		handle.setHasProductClusterAllIP(true);
+end
+/*
+ 	Produkt Menu for Customer who selected "Administration" in the Anliegenmenu
+*/
+
+// Rules for customers with only one product(cluster)
+rule "01_ProduktMenu_Administration_onlyOneProduct_Festnetz"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterFixnet == true, hasMoreThanOneProductCluster == false, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "02_ProduktMenu_Administration_onlyOneProduct_Mobile"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterMobile == true, hasMoreThanOneProductCluster == false, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(mobileSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "03_ProduktMenu_Administration_onlyOneProduct_Internet"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterInternet == true, hasMoreThanOneProductCluster == false, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(internetSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "04_ProduktMenu_Administration_onlyOneProduct_ITHosting"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterITHosting == true, hasMoreThanOneProductCluster == false, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(ithostingSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "05_ProduktMenu_Administration_onlyOneProduct_PBX"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterPBX == true, hasMoreThanOneProductCluster == false, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+//Rules for customers with more than one product(cluster)
+rule "06_ProduktMenu_Administration_moreThanOneProduct_InternetOnly"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterInternet == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "06a_ProduktMenu_Administration_moreThanOneProduct_InternetOnly_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterInternet == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "07_ProduktMenu_Administration_moreThanOneProduct_ITHostingOnly"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterITHosting == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(ithostingSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "07a_ProduktMenu_Administration_moreThanOneProduct_ITHostingOnly_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterITHosting == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "08_ProduktMenu_Administration_moreThanOneProduct_PBXOnly"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "08a_ProduktMenu_Administration_moreThanOneProduct_PBXOnly_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "09_ProduktMenu_Administration_moreThanOneProduct_Internet_ITHosting"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterInternet == true, hasProductClusterITHosting == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "09a_ProduktMenu_Administration_moreThanOneProduct_Internet_ITHosting_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterInternet == true, hasProductClusterITHosting == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "10_ProduktMenu_Administration_moreThanOneProduct_Internet_PBX"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterInternet == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "10a_ProduktMenu_Administration_moreThanOneProduct_Internet_PBX_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterInternet == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "11_ProduktMenu_Administration_moreThanOneProduct_ITHosting_PBX"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterITHosting == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(ithostingSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "11a_ProduktMenu_Administration_moreThanOneProduct_ITHosting_PBX_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterITHosting == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "12_ProduktMenu_Administration_moreThanOneProduct_Internet_ITHosting_PBX"
+	no-loop
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == false, hasProductClusterInternet == true, hasProductClusterITHosting == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for all IP Customers with higher salience
+rule "12a_ProduktMenu_Administration_moreThanOneProduct_Internet_ITHosting_PBX_ALLIP"
+	no-loop
+	salience 1
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( hasProductClusterAllIP == true, hasProductClusterInternet == true, hasProductClusterITHosting == true, hasProductClusterPBX == true, hasMoreThanOneProductCluster == true, state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "13_ProduktMenu_Administration_FALLBACK"
+	no-loop
+	salience -1000
+	activation-group "ProduktMenu"
+	when 
+		handle: R5RulesBean ( state != R5RulesBean.PRODUKTMENU_DONE  )
+		callProfile : CallProfile( ) 
+		eval ( "ADMINISTRATION".equals(callProfile.get("smeAnliegenMenu")) )
+	then
+		menuOptions.add(rechnung());
+		menuOptions.add(festnetzSF());
+		menuOptions.add(mobileSF());
+		menuOptions.add(internetSF());
+		menuOptions.add(ithostingSF());
+		menuOptions.add(pbxSF());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+
+rule "14_PreQualification_ProduktMenu_STOERUNG"
+	no-loop
+	when
+		handle: R5RulesBean ( )
+		callProfile : CallProfile( ) 
+		eval ( "STOERUNG".equals(callProfile.get("smeAnliegenMenu")) ||
+			   "STOERUNG".equals(callProfile.get("smeNachtMenu")) )
+	then
+		handle.setAnliegen("STOERUNG");
+end
+
+rule "20_ProduktMenu_STOERUNG_UnknownCustomer"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1000
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE )
+    	customerProfile: CustomerProfile ()
+    	eval ( StringUtils.isEmpty(customerProfile.getCustomerID()))
+    	
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+// Special rule for ALL IP in case an unknown customer has the product
+rule "20a_ProduktMenu_STOERUNG_UnknownCustomer_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1001
+  	when
+    	handle: R5RulesBean( hasProductClusterAllIP == true, anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE )
+    	customerProfile: CustomerProfile ()
+    	eval ( StringUtils.isEmpty(customerProfile.getCustomerID()))
+    	
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+// The next 63 rules check for all combinations of products clusters and only
+// return the menu options that connect to the cluster
+/*
+Variante  Festnetz  Mobile    Internet  TV        ITHosting PBX       Comment
+1         X                                                           1 Cluster
+2                   X                                                 
+3                             X                                       
+4                                       X                             
+5                                                 X                   
+6                                                           X         
+7         X         X                                                 2 Cluster
+8         X                   X                                       
+9         X                             X                             
+10        X                                       X                   
+11        X                                                 X         
+12                  X         X                                       
+13                  X                   X                             
+14                  X                             X                   
+15                  X                                       X         
+16                            X         X                             
+17                            X                   X                   
+18                            X                             X         
+19                                      X         X                   
+20                                      X                   X         
+21                                                X         X         
+22        X         X         X                                       3 Cluster
+23        X         X                   X                             
+24        X         X                             X                   
+25        X         X                                       X         
+26        X                   X         X                             
+27        X                   X                   X                   
+28        X                   X                             X         
+29        X                             X         X                   
+30        X                             X                   X         
+31        X                                       X         X         
+32                  X         X         X                             
+33                  X         X                   X                   
+34                  X         X                             X         
+35                  X                   X         X                   
+36                  X                   X                   X         
+37                  X                             X         X         
+38                            X         X         X                   
+39                            X         X                   X         
+40                            X                   X         X         
+41                                      X         X         X         
+42        X         X         X         X                             4 Cluster
+43        X         X         X                   X                   
+44        X         X         X                             X         
+45        X         X                   X         X                   
+46        X         X                   X                   X         
+47        X         X                             X         X         
+48        X                   X         X         X                   
+49        X                   X         X                   X         
+50        X                   X                   X         X         
+51        X                             X         X         X         
+52                  X         X         X         X                   
+53                  X         X         X                   X         
+54                  X                   X         X         X         
+55                  X         X                   X         X         
+56                            X         X         X         X         
+57        X         X         X         X         X                   5 Cluster
+58        X         X         X         X                   X         
+59        X         X         X                   X         X         
+60        X         X                   X         X         X         
+61        X                   X         X         X         X         
+62                  X         X         X         X         X         
+63        X         X         X         X         X         X         6 Cluster
+
+*/
+rule "21_ProduktMenu_STOERUNG_Variant01"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "22_ProduktMenu_STOERUNG_Variant02"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "23_ProduktMenu_STOERUNG_Variant03"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(internetSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "24_ProduktMenu_STOERUNG_Variant04"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "25_ProduktMenu_STOERUNG_Variant05"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "26_ProduktMenu_STOERUNG_Variant06"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "27_ProduktMenu_STOERUNG_Variant07"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "28_ProduktMenu_STOERUNG_Variant08"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "29_ProduktMenu_STOERUNG_Variant09"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "30_ProduktMenu_STOERUNG_Variant10"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "31_ProduktMenu_STOERUNG_Variant11"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "32_ProduktMenu_STOERUNG_Variant12"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "33_ProduktMenu_STOERUNG_Variant13"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "34_ProduktMenu_STOERUNG_Variant14"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "35_ProduktMenu_STOERUNG_Variant15"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "36_ProduktMenu_STOERUNG_Variant16"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "37_ProduktMenu_STOERUNG_Variant17"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "38_ProduktMenu_STOERUNG_Variant18"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "39_ProduktMenu_STOERUNG_Variant19"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "40_ProduktMenu_STOERUNG_Variant20"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "41_ProduktMenu_STOERUNG_Variant21"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "42_ProduktMenu_STOERUNG_Variant22"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "43_ProduktMenu_STOERUNG_Variant23"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "44_ProduktMenu_STOERUNG_Variant24"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "45_ProduktMenu_STOERUNG_Variant25"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "46_ProduktMenu_STOERUNG_Variant26"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "47_ProduktMenu_STOERUNG_Variant27"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "48_ProduktMenu_STOERUNG_Variant28"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "49_ProduktMenu_STOERUNG_Variant29"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "50_ProduktMenu_STOERUNG_Variant30"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "51_ProduktMenu_STOERUNG_Variant31"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "52_ProduktMenu_STOERUNG_Variant32"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "53_ProduktMenu_STOERUNG_Variant33"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "54_ProduktMenu_STOERUNG_Variant34"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "55_ProduktMenu_STOERUNG_Variant35"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "56_ProduktMenu_STOERUNG_Variant36"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "57_ProduktMenu_STOERUNG_Variant37"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "58_ProduktMenu_STOERUNG_Variant38"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "59_ProduktMenu_STOERUNG_Variant39"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "60_ProduktMenu_STOERUNG_Variant40"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "61_ProduktMenu_STOERUNG_Variant41"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "62_ProduktMenu_STOERUNG_Variant42"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "63_ProduktMenu_STOERUNG_Variant43"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "64_ProduktMenu_STOERUNG_Variant44"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "65_ProduktMenu_STOERUNG_Variant45"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "66_ProduktMenu_STOERUNG_Variant46"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "67_ProduktMenu_STOERUNG_Variant47"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "68_ProduktMenu_STOERUNG_Variant48"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "69_ProduktMenu_STOERUNG_Variant49"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "70_ProduktMenu_STOERUNG_Variant50"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "71_ProduktMenu_STOERUNG_Variant51"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "72_ProduktMenu_STOERUNG_Variant52"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "73_ProduktMenu_STOERUNG_Variant53"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "74_ProduktMenu_STOERUNG_Variant54"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "75_ProduktMenu_STOERUNG_Variant55"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "76_ProduktMenu_STOERUNG_Variant56"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "77_ProduktMenu_STOERUNG_Variant57"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "78_ProduktMenu_STOERUNG_Variant58"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "79_ProduktMenu_STOERUNG_Variant59"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "80_ProduktMenu_STOERUNG_Variant60"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == false,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "81_ProduktMenu_STOERUNG_Variant61"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "82_ProduktMenu_STOERUNG_Variant62"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == false,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "83_ProduktMenu_STOERUNG_Variant63"
+	activation-group "ProduktMenu"
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterFixnet    == true,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterInternet  == true,
+    						 hasProductClusterTV        == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "84_ProduktMenu_STOERUNG_FALLBACK"
+	activation-group "ProduktMenu"
+	salience -2000
+  	no-loop
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE )
+  	then
+	  	menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+/*
+
+The next rules are for All IP Customers. They always get
+Festnetz, Internet and TV so we only need rules for 
+combinations of the other products
+Variante  Mobile    ITHosting PBX      
+1         -         -         -                             
+2         -         -         X         
+3         -         X         -                                      
+4         -         X         X                                      
+5         X         -         -        
+6         X         -         X        
+7         X         X         -                            
+8         X         X         X                                      
+
+*/   
+
+rule "85_ProduktMenu_STOERUNG_Variant01_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "86_ProduktMenu_STOERUNG_Variant02_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "87_ProduktMenu_STOERUNG_Variant03_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "88_ProduktMenu_STOERUNG_Variant04_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == false,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "89_ProduktMenu_STOERUNG_Variant05_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == false,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "90_ProduktMenu_STOERUNG_Variant06_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterITHosting == false,
+    						 hasProductClusterPBX       == true,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "91_ProduktMenu_STOERUNG_Variant07_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == false,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+
+rule "92_ProduktMenu_STOERUNG_Variant08_ALLIP"
+	activation-group "ProduktMenu"
+  	no-loop
+  	salience 1
+  	when
+    	handle: R5RulesBean( anliegen == "STOERUNG", state != R5RulesBean.PRODUKTMENU_DONE,
+    						 hasProductClusterMobile    == true,
+    						 hasProductClusterITHosting == true,
+    						 hasProductClusterPBX       == true,
+    						 hasProductClusterAllIP		== true)
+  	then
+		menuOptions.add(festnetzSA());
+		menuOptions.add(mobileSA());
+		menuOptions.add(internetSA());
+		menuOptions.add(tvSA());
+		menuOptions.add(ithostingSA());
+		menuOptions.add(pbxSA());
+		handle.setState (R5RulesBean.PRODUKTMENU_DONE);
+end
+

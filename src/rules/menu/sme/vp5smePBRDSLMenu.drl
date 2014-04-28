@@ -1,0 +1,54 @@
+/*
+ * (c)2012 Avaya. All Rights Reserved.
+ *
+ * @(#) $Id: vp5smePBRDSLMenu.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.vp2smeNewProductMenuMobile;
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption pbrDSL1() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PBRDSL1");
+  	  option.setPrompt("pbrdsl-option1");
+  	  option.setSkill("");
+  	  option.setAction("TRANSFER");
+  	  return option;
+} 
+
+function ExtendedMenuOption pbrDSL2() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("PBRDSL2");
+  	  option.setPrompt("pbrdsl-option2");
+  	  option.setAction("CONTINUE");
+  	  return option;
+} 
+ 
+/*
+   Static menu for PBR DSL@MOBILE for Kundendienst selection when caller has DSL@Mobile
+        
+   Mapping numeric menu options to actual options:
+	SME_PBRDSL_OPTION_1 = new Long(1260);
+	SME_PBRDSL_OPTION_2 = new Long(1270);
+*/
+
+
+rule "Static_PBRDSL_Menu"
+	no-loop
+	when
+
+	then
+		menuOptions.add(pbrDSL1()); //1260
+		menuOptions.add(pbrDSL2()); //1270
+end

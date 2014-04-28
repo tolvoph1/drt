@@ -1,0 +1,391 @@
+package com.nortel.ema.swisscom.bal.state
+
+/*
+	@(#) $Id: vp5cbu-0800724003-state.drl 23 2013-08-12 14:45:27Z tolvoph1 $
+	$Author: tolvoph1 $
+	NOTE: If this file is updated, update 0582249183 state rules as well!
+*/
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CallDetail;
+import com.nortel.ema.swisscom.bal.vo.model.ServiceConfigurationMap;
+import com.nortel.ema.swisscom.bal.rules.model.StateEngineRulesResult;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import java.util.Set;
+import java.util.Date;
+
+
+/* 
+ First state:
+ - Init without ANI -> Welcome
+ - Init with ANI -> SetPNFromSession
+ */
+rule "001_Init_NoAniPlayJingle"
+	no-loop
+	salience -100
+	when
+		(
+			CallProfile ( nextState == "Init", ani == "" ) || 
+			CallProfile ( nextState == "Init", ani == "0" ) || 
+			CallProfile ( nextState == "Init", ani == null )    
+		)
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");		
+		serr.setNextState("Welcome");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "001_Init_GotAniSetPNFromSession"
+	no-loop
+	salience -1000
+	when
+		CallProfile ( nextState == "Init" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETPNFROMSESSION_NOLOOKUP");		
+		serr.setNextState("WhitelistEmergencyAnnouncements");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Campaign before Welcome to sort out Johnson control callers
+*/
+
+rule "010_WhitelistEmergencyAnnouncements"
+	no-loop
+	when
+		CallProfile ( nextState == "WhitelistEmergencyAnnouncements" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETINASACTIONS");
+		serr.setOutputVar1("CBU-NV");
+		serr.setNextState("JohnsonCampaign");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "011_JohnsonCampaign"
+	no-loop
+	when
+		CallProfile ( nextState == "JohnsonCampaign" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXECINASACTIONS");
+		serr.setOutputVar1("CBU-NV-JOHNSON");
+		serr.setNextState("JohnsonCampaignResponse");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+rule "012a_Campaign_actionResponse_Transfer_or_InputError"
+	no-loop
+	when
+		CallProfile ( nextState == "JohnsonCampaignResponse", actionResponse == "InputError" ) ||
+		CallProfile ( nextState == "JohnsonCampaignResponse", actionResponse == "TRANSFER" ) 
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "012b_Campaign_actionResponse_NotTransfer"
+	no-loop
+	when
+		CallProfile ( nextState == "JohnsonCampaignResponse", actionResponse != "TRANSFER", actionResponse != "InputError" ) 
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Welcome");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Welcome single/multi-language if required
+*/
+
+rule "015_SingleLanguage_PlayWelcomeTrue"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome", singleLanguage != "false", playwelc != "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("Novartis-welcome");
+		serr.setNextState("LookupPhonenumber");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "015_MultiLanguage_PlayWelcomeTrue"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome", singleLanguage == "false", playwelc != "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SPEAK");
+		serr.setOutputVar1("Novartis-Welcome-Multilingual");
+		serr.setNextState("LookupPhonenumber");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "015_MultiLanguage_PlayWelcomeFalse"
+	no-loop
+	when
+		CallProfile ( nextState == "Welcome", playwelc == "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("LookupPhonenumber");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/* 
+ Complete setting PN from ANI if possible
+ */
+rule "016_Init_NoAni_Proceed"
+	no-loop
+	salience -100
+	when
+		(
+			CallProfile ( nextState == "LookupPhonenumber", ani == "" ) || 
+			CallProfile ( nextState == "LookupPhonenumber", ani == "0" ) || 
+			CallProfile ( nextState == "LookupPhonenumber", ani == null )    
+		)
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");		
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "016_Init_GotAni_Lookup"
+	no-loop
+	salience -1000
+	when
+		CallProfile ( nextState == "LookupPhonenumber" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PNLOOKUP");		
+		serr.setNextState("LanguageSelection");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+/* 
+  Language Selection if necessary
+*/
+
+rule "020_LanguageSelection"
+	no-loop
+	when
+		CallProfile ( nextState == "LanguageSelection", singleLanguage == "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("LANGSELECT");
+		serr.setNextState("GetResultCustomerInformation");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "020_NoLanguageSelection"
+	no-loop
+	when
+		CallProfile ( nextState == "LanguageSelection", singleLanguage != "false" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("GetResultCustomerInformation");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "120_GetResultCustomerInformation"
+	no-loop
+	when
+		( CallProfile ( nextState == "GetResultCustomerInformation" ) )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("GETRESULTCUSTINFO");
+		serr.setNextState("EmergencyAnnouncements");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Emergency announcements
+*/
+
+rule "130_EmergencyAnnouncements_Set"
+	no-loop
+	when
+		CallProfile ( nextState == "EmergencyAnnouncements" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("SETINASACTIONS");
+		serr.setOutputVar1("CBU-NV");
+		serr.setNextState("PlayEmergencyAnnouncements");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "135_EmergencyAnnouncements_Play"
+	no-loop
+	when
+		CallProfile ( nextState == "PlayEmergencyAnnouncements" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXECINASACTIONS");
+		serr.setOutputVar1("MAIN");
+		serr.setNextState("MenuLevel1");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Menu level 1
+*/
+
+rule "140_MenuLevel1"
+	no-loop
+	when
+		CallProfile ( nextState == "MenuLevel1" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXTENDEDMENU");
+		serr.setOutputVar1("cbu/vp5cbu-0800724003-menu-level1");
+		serr.setOutputVar2("CBU-NV");
+		serr.setOutputVar3("cbu/vp5cbu-0800724003-menu-level1");
+		serr.addToOutputColl1("select", "alm-menue-please-select"); 
+		serr.setNextState("CheckMenuSelectionLevel1");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Menu level 1 has been offered, check if we need a second menu level or transfer
+  actionResponse is "MENU", nextMenuName contains name of the rules for the next level
+*/
+
+rule "150_CheckMenuSelectionLevel1AnotherMenuLevel"
+	no-loop
+	when
+		callProfile:CallProfile ( nextState == "CheckMenuSelectionLevel1", actionResponse == "MENU" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("EXTENDEDMENU");
+		serr.setOutputVar1("cbu/vp5cbu-0800724003-menu-level2");
+		serr.setOutputVar2("CBU-NV");
+		serr.setOutputVar3("cbu/vp5cbu-0800724003-menu-level2");
+		serr.addToOutputColl1("select", "pm-menue-please-select"); 
+		serr.setNextState("CheckMenuSelectionLevel2");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Menu level 1 has been offered
+  actionResponse is "TRANSFER", so we proceed with transfer
+  NextState: Disconnect
+*/
+rule "150_CheckMenuSelectionLevel1Transfer"
+	no-loop
+	when
+		callProfile:CallProfile ( nextState == "CheckMenuSelectionLevel1", actionResponse == "TRANSFER" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Menu level 1 has been offered
+  actionResponse is "InputError", so we proceed with transfer
+  NextState: Disconnect
+*/
+rule "150_CheckMenuSelectionLevel1InputError"
+	no-loop
+	salience 5
+	when
+		callProfile:CallProfile ( nextState == "CheckMenuSelectionLevel1", actionResponse == "InputError" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+
+/*
+  Menu level 2 has been offered
+  There is always a transfer after menu level 2, so no check for actionResponse
+*/
+
+rule "160_CheckMenuSelectionLevel2"
+	no-loop
+	when
+		callProfile:CallProfile ( nextState == "CheckMenuSelectionLevel2")
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+/*
+  Menu level 2 has been offered
+  InputError
+*/
+
+rule "160_CheckMenuSelectionLevel2InputError"
+	no-loop
+	salience 5
+	when
+		callProfile:CallProfile ( nextState == "CheckMenuSelectionLevel2", actionResponse == "InputError")
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "200_Transfer"
+	no-loop
+	when
+		CallProfile ( nextState == "Transfer" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("TRANSFER");
+		serr.setOutputVar1("cbu/vp5cbu-0800724003-transfer");
+		serr.setNextState("Disconnect");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "210_Disconnect"
+	no-loop
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "998_FALLBACK_TRANSFER"
+	no-loop
+	salience -10000
+	when
+		callProfile: CallProfile ( nextState != "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("PROCEED");
+		serr.setNextState("Transfer");
+		serr.setState(StateEngineRulesResult.DONE);
+end
+
+rule "999_FALLBACK_DISCONNECT"
+	no-loop
+	salience -20000
+	when
+		CallProfile ( nextState == "Disconnect" )
+		serr : StateEngineRulesResult(state == StateEngineRulesResult.NOT_SET )
+	then
+		serr.setAction("DISCONNECT");
+		serr.setNextState("ThisShouldNeverHappen");
+		serr.setState(StateEngineRulesResult.DONE);
+end

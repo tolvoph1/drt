@@ -1,0 +1,57 @@
+/*
+ * (c)2008 Nortel Networks Limited. All Rights Reserved.
+ *
+ * @(#) $Id: vp5cbu-0800724008-menu-level1.drl 5 2013-08-05 10:00:45Z tolvoph1 $
+ * $Author: tolvoph1 $
+ * $Date: 2013-08-05 12:00:45 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 5 $
+ */
+package com.nortel.ema.swisscom.bal.rules.cbu.menu
+
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProfile;
+import com.nortel.ema.swisscom.bal.vo.model.CustomerProducts;
+import com.nortel.ema.swisscom.bal.vo.model.CallProfile;
+import com.nortel.ema.swisscom.bal.rules.model.facts.R5RulesBean;
+import com.nortel.ema.swisscom.bal.menu.model.ExtendedMenuOption;
+import java.util.List;
+
+global List menuOptions;
+global String language;
+
+function ExtendedMenuOption saOUS() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("SA_OUS");
+  	  option.setPrompt("alm-serviceassuranceous");
+  	  option.setSkill("SA_OUS");
+  	  option.setEmergencyText("SA"); //??
+  	  option.setAction("MENU");
+  	  return option;
+}
+
+function ExtendedMenuOption order() {
+  	  ExtendedMenuOption option = new ExtendedMenuOption();
+  	  option.setName("ORDER");
+  	  option.setPrompt("alm-order");
+  	  option.setSkill("ORDER");
+  	  option.setEmergencyText("ORDER"); //??
+  	  option.setAction("TRANSFER");
+  	  return option;
+}
+ 
+/*
+   Static menu 1st level
+      
+   Mapping numeric menu options to actual options:
+    * public static final Long MENU_SA_OUS = new Long(4020); => Stoerung
+	* public static final Long MENU_ORDER = new Long(4030);  => Bestellungen
+*/
+
+
+rule "0800724008_Level1"
+	no-loop
+	when
+
+	then
+		menuOptions.add(saOUS()); //4020
+		menuOptions.add(order()); //4030
+end
